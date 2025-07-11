@@ -1,0 +1,31 @@
+[project]
+name = "mercari-japan-ai-shopper"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "aiocache[redis]>=0.12.3",
+    "aioretry>=6.3.1",
+    "anthropic>=0.57.1",
+    "json-repair>=0.47.6",
+    "loguru>=0.7.3",
+    "playwright>=1.53.0",
+    "playwright-stealth>=2.0.0",
+    "pydantic>=2.11.7",
+    "python-dotenv>=1.1.1",
+]
+
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+ignore = ["B008", "C901", "E266"]
+select = ["B", "B9", "C", "D", "E", "F", "I", "PL", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D", "PLR"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
