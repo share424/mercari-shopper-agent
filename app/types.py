@@ -10,6 +10,16 @@ from anthropic.types import ToolParam
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class ItemRelevanceScore(BaseModel):
+    """A structured representation of a relevance score for an item."""
+
+    score: float = Field(default=0.0, description="The relevance score of the item.")
+    """The relevance score of the item."""
+
+    reasoning: str = Field(default="", description="The reasoning for the relevance score.")
+    """The reasoning for the relevance score."""
+
+
 class ToolResult(BaseModel):
     """Base class for a tool result.
 
@@ -151,6 +161,9 @@ class Item(BaseModel):
 
     item_detail: ItemDetail | None = None
     """The detail of the item."""
+
+    relevance_score: ItemRelevanceScore | None = None
+    """The relevance score of the item."""
 
 
 class ItemRecommendation(BaseModel):

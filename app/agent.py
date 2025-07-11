@@ -5,6 +5,7 @@ This agent is used to search for items on Mercari and select the best item.
 
 from typing import Any, cast
 
+from aioretry.retry import retry
 from anthropic import AsyncAnthropic
 from anthropic.types import (
     Message,
@@ -15,10 +16,10 @@ from anthropic.types import (
 )
 from loguru import logger
 
-from app.prompt import SYSTEM_PROMPT, USER_PROMPT
-from app.tools.mercari_search import MercariSearchTool
-from app.tools.select_best_item import SelectBestItemTool
+from app.prompts.agent import SYSTEM_PROMPT, USER_PROMPT
+from app.tools import EvaluateSearchResultTool, MercariSearchTool, SelectBestItemTool
 from app.types import ItemRecommendation, State, Tool
+from app.utils import retry_policy
 
 
 class MercariShoppingAgent:
@@ -45,7 +46,11 @@ class MercariShoppingAgent:
         self.client = client
         self.model = model
         self.max_iterations = max_iterations
-        self.tools = tools or [MercariSearchTool(), SelectBestItemTool()]
+        self.tools = tools or [
+            MercariSearchTool(),
+            SelectBestItemTool(),
+            EvaluateSearchResultTool(client=client, model=model),
+        ]
         self._tool_params = self._get_tool_params()
         self._tools_by_name = {tool.name: tool for tool in self.tools}
 
@@ -70,7 +75,7 @@ class MercariShoppingAgent:
         messages.append(
             MessageParam(
                 role="user",
-                content=USER_PROMPT.format(state=state.get_llm_friendly_state()),
+                content=USER_PROMPT.format(query=state.user_query),
             )
         )
         return messages
@@ -111,6 +116,7 @@ class MercariShoppingAgent:
         messages.append(MessageParam(role=response.role, content=response.content))
         return messages
 
+    @retry(retry_policy)
     async def _get_llm_response(self, messages: list[MessageParam]) -> Message:
         """Get the LLM response.
 
@@ -202,15 +208,14 @@ class MercariShoppingAgent:
         """
         state = State(user_query=query)
         messages: list[MessageParam] = []
+        # 0. Add current state to messages
+        messages = self._add_current_state_to_messages(messages, state)
 
         for iteration in range(self.max_iterations):
-            logger.info(f"Iteration {iteration}")
+            logger.info(f"Iteration {iteration + 1}")
 
             if self._should_stop(state):
                 break
-
-            # 0. Add current state to messages
-            messages = self._add_current_state_to_messages(messages, state)
 
             # 1. Call LLM with current state
             response = await self._get_llm_response(messages)
