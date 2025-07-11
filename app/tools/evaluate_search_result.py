@@ -8,13 +8,14 @@ from datetime import datetime
 from typing import Type
 
 import json_repair
+from aioretry.retry import retry
 from anthropic import AsyncAnthropic
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.prompts.evaluate_item import SYSTEM_PROMPT, USER_PROMPT
 from app.types import Item, ItemRelevanceScore, State, Tool, ToolResult
-from app.utils import get_llm_friendly_item, get_llm_friendly_items
+from app.utils import get_llm_friendly_item, get_llm_friendly_items, retry_policy
 
 
 class EvaluateSearchResultToolArgs(BaseModel):
@@ -46,6 +47,7 @@ class EvaluateSearchResultTool(Tool):
     args_schema: Type[BaseModel] = EvaluateSearchResultToolArgs
     """The arguments schema for the tool."""
 
+    @retry(retry_policy)
     async def _evaluate_item(self, state: State, item: Item) -> ItemRelevanceScore:
         """Evaluate an item."""
         response = await self.client.messages.create(
@@ -58,6 +60,9 @@ class EvaluateSearchResultTool(Tool):
                     "content": USER_PROMPT.format(
                         item_info=get_llm_friendly_item(item),
                         user_query=state.user_query,
+                        market_research=item.market_research_result.get_llm_friendly_result()
+                        if item.market_research_result
+                        else "",
                     ),
                 }
             ],

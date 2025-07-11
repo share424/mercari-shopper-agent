@@ -17,7 +17,13 @@ from anthropic.types import (
 from loguru import logger
 
 from app.prompts.agent import SYSTEM_PROMPT, USER_PROMPT
-from app.tools import EvaluateSearchResultTool, MercariSearchTool, SelectBestItemTool
+from app.tools import (
+    EvaluateSearchResultTool,
+    GeneralMarketResearchTool,
+    MarketResearchTool,
+    MercariSearchTool,
+    SelectBestItemTool,
+)
 from app.types import ItemRecommendation, State, Tool
 from app.utils import retry_policy
 
@@ -32,6 +38,7 @@ class MercariShoppingAgent:
         self,
         client: AsyncAnthropic,
         model: str,
+        serpapi_api_key: str,
         max_iterations: int = 15,
         tools: list[Tool] | None = None,
     ):
@@ -40,8 +47,9 @@ class MercariShoppingAgent:
         Args:
             client (AsyncAnthropic): The Anthropic client.
             model (str): The model to use.
+            serpapi_api_key (str): The API key for the SerpApi.
             max_iterations (int): The maximum number of iterations. Defaults to 15.
-            tools (list[Tool]): The tools to use. Defaults to [MercariSearchTool(), SelectBestItemTool()].
+            tools (list[Tool]): The tools to use. Defaults to [MercariSearchTool(), SelectBestItemTool(),].
         """
         self.client = client
         self.model = model
@@ -49,6 +57,8 @@ class MercariShoppingAgent:
         self.tools = tools or [
             MercariSearchTool(),
             SelectBestItemTool(),
+            MarketResearchTool(api_key=serpapi_api_key),
+            GeneralMarketResearchTool(api_key=serpapi_api_key),
             EvaluateSearchResultTool(client=client, model=model),
         ]
         self._tool_params = self._get_tool_params()
@@ -191,6 +201,7 @@ class MercariShoppingAgent:
         """
         for content in response.content:
             if not content.type == "text":
+                logger.debug(f"LLM response: {content.type}")
                 continue
             logger.info(f"LLM response: {content.text}")
 
@@ -215,7 +226,7 @@ class MercariShoppingAgent:
             logger.info(f"Iteration {iteration + 1}")
 
             if self._should_stop(state):
-                break
+                return state.recommended_items
 
             # 1. Call LLM with current state
             response = await self._get_llm_response(messages)
@@ -227,7 +238,11 @@ class MercariShoppingAgent:
                 logger.info("Tool call detected")
                 state, tool_results = await self._handle_tool_call(state, response)
                 messages = self._add_tool_results_to_messages(messages, tool_results)
+            else:
+                logger.info(f"Stop reason: {response.stop_reason}")
+                return state.recommended_items
 
+        logger.info("Max iterations reached")
         return state.recommended_items
 
     async def run(self, query: str) -> list[ItemRecommendation]:

@@ -13,8 +13,8 @@ from loguru import logger
 from app.exception import SearchNotFoundError
 from app.types import Item
 
-INITIAL_RETRY_DELAY = 1
-MAX_RETRIES = 3
+INITIAL_RETRY_DELAY = 3
+MAX_RETRIES = 5
 MAX_BACKOFF = 60
 JITTER_FACTOR = 0.1
 
@@ -49,9 +49,9 @@ def retry_policy(info: RetryInfo) -> RetryPolicyStrategy:
     Returns:
         RetryPolicyStrategy: The retry policy strategy.
     """
-    logger.info(f"Retry attempt {info.fails + 1}")
+    logger.info(f"Retry attempt {info.fails} of {MAX_RETRIES}")
     should_stop = True
-    if isinstance(info.exception, (SearchNotFoundError, InternalServerError)) and info.fails <= MAX_RETRIES:
+    if isinstance(info.exception, (SearchNotFoundError, InternalServerError)) or info.fails <= MAX_RETRIES:
         should_stop = False
 
     delay = min(INITIAL_RETRY_DELAY * (2 ** (info.fails - 1)), MAX_BACKOFF)

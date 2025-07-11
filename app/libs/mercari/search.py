@@ -11,9 +11,9 @@ from loguru import logger
 from playwright.async_api import Browser, Page, async_playwright
 from playwright_stealth import Stealth
 
-from app.thirdparty.mercari.config import USER_AGENT, VIEWPORT
-from app.thirdparty.mercari.pages.item_detail import MercariItemDetailPage
-from app.thirdparty.mercari.pages.search import MercariSearchPage
+from app.libs.mercari.config import USER_AGENT, VIEWPORT
+from app.libs.mercari.pages.item_detail import MercariItemDetailPage
+from app.libs.mercari.pages.search import MercariSearchPage
 from app.types import Item, ItemDetail
 from app.utils import retry_policy
 

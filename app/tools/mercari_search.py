@@ -7,7 +7,7 @@ from typing import Type
 
 from pydantic import BaseModel, Field
 
-from app.thirdparty.mercari import MercariSearch
+from app.libs.mercari import MercariSearch
 from app.types import Item, State, Tool, ToolResult
 from app.utils import get_llm_friendly_items
 

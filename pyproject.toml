@@ -8,12 +8,15 @@ dependencies = [
     "aiocache[redis]>=0.12.3",
     "aioretry>=6.3.1",
     "anthropic>=0.57.1",
+    "httpx>=0.28.1",
     "json-repair>=0.47.6",
     "loguru>=0.7.3",
+    "numpy>=2.3.1",
     "playwright>=1.53.0",
     "playwright-stealth>=2.0.0",
     "pydantic>=2.11.7",
     "python-dotenv>=1.1.1",
+    "serpapi>=0.1.5",
 ]
 
 

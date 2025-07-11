@@ -129,6 +129,133 @@ class ItemDetail(BaseModel):
     """The categories the item belongs to."""
 
 
+class MarketResearchResult(BaseModel):
+    """A structured representation of the market research result."""
+
+    average_price: float
+    """The average price of the item."""
+
+    median_price: float
+    """The median price of the item."""
+
+    std_price: float
+    """The standard deviation of the price."""
+
+    is_error: bool
+    """Whether the market research was successful."""
+
+
+class PriceRange(BaseModel):
+    """A structured representation of the price range."""
+
+    min: float
+    """The minimum price of the price range."""
+
+    max: float
+    """The maximum price of the price range."""
+
+    average: float
+    """The average price of the price range."""
+
+    median: float
+    """The median price of the price range."""
+
+    budget_range_max: float
+    """The maximum price of the budget range."""
+
+    mid_range_min: float
+    """The minimum price of the mid range."""
+
+    mid_range_max: float
+    """The maximum price of the mid range."""
+
+    premium_range_min: float
+    """The minimum price of the premium range."""
+
+    excellent_deal_max: float
+    """The maximum price of the excellent deal."""
+
+    good_deal_max: float
+    """The maximum price of the good deal."""
+
+    overpriced_min: float
+    """The minimum price of the overpriced range."""
+
+
+class PriceGuidance(BaseModel):
+    """A structured representation of the price guidance."""
+
+    budget_shopping: str
+    """The budget shopping guidance."""
+
+    typical_pricing: str
+    """The typical pricing guidance."""
+
+    premium_pricing: str
+    """The premium pricing guidance."""
+
+    excellent_deals: str
+    """The excellent deals guidance."""
+
+    good_deals: str
+    """The good deals guidance."""
+
+    avoid_overpriced: str
+    """The avoid overpriced guidance."""
+
+    expected_price: str
+    """The expected price guidance."""
+
+
+class ShoppingRecommendation(BaseModel):
+    """A structured representation of the shopping recommendation."""
+
+    price_strategy: str
+    """The price strategy."""
+
+    timing_strategy: str
+    """The timing strategy."""
+
+    value_strategy: str
+    """The value strategy."""
+
+
+class MarketIntelligenceResult(BaseModel):
+    """A structured representation of the market intelligence."""
+
+    typical_price_range: PriceRange
+    """The typical price range."""
+
+    price_guidance: PriceGuidance
+    """The price guidance."""
+
+    price_volatility: str
+    """The price volatility."""
+
+    shopping_recommendations: ShoppingRecommendation
+    """The shopping recommendations."""
+
+    market_summary: str
+    """The market summary."""
+
+    def get_llm_friendly_result(self) -> str:
+        """Get the LLM friendly result."""
+        report = "Market Intelligence Report:"
+        report += f"\nSummary: {self.market_summary}"
+        report += f"\nPrice Strategy: {self.shopping_recommendations.price_strategy}"
+        report += f"\nValue Strategy: {self.shopping_recommendations.value_strategy}"
+        report += f"\nExpected Price: {self.price_guidance.expected_price}"
+        report += f"\nPrice Volatility: {self.price_volatility}"
+        return report
+
+
+class BasicProductData(BaseModel):
+    """A structured representation of the basic product data."""
+
+    price: float
+    """The price of the product."""
+
+
 class Item(BaseModel):
     """A structured representation of a product listing from Mercari."""
 
@@ -164,6 +291,9 @@ class Item(BaseModel):
 
     relevance_score: ItemRelevanceScore | None = None
     """The relevance score of the item."""
+
+    market_research_result: MarketIntelligenceResult | None = None
+    """The market research result of the item."""
 
 
 class ItemRecommendation(BaseModel):
