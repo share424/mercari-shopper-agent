@@ -13,7 +13,7 @@ from app.types import ItemRecommendation
 load_dotenv()
 
 client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-agent = MercariShoppingAgent(client=client, model="claude-3-5-sonnet-latest")
+agent = MercariShoppingAgent(client=client, model=os.getenv("MODEL_NAME", "claude-3-5-sonnet-latest"))
 
 
 def get_item_recommendations_text(item_recommendations: list[ItemRecommendation] | None) -> str:

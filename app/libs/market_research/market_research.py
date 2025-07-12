@@ -1,5 +1,6 @@
 """Ebay Research."""
 
+import os
 from typing import Any
 
 from aiocache import Cache
@@ -21,7 +22,12 @@ class MarketResearch:
 
     async def __aenter__(self):
         """Enter the context manager."""
-        self._cache = Cache(Cache.REDIS, namespace="market_intelligence")  # type: ignore
+        self._cache = Cache(
+            Cache.REDIS,  # type: ignore
+            namespace="market_intelligence",
+            endpoint=os.getenv("REDIS_HOST"),
+            port=os.getenv("REDIS_PORT"),
+        )
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):

@@ -1,4 +1,15 @@
 services:
+  app:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "7860:7860"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - GRADIO_SERVER_NAME=0.0.0.0
+    depends_on:
+      - redis
   redis:
     image: redis:latest
     ports:

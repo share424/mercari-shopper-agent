@@ -4,6 +4,7 @@ This module contains the Mercari Search class.
 """
 
 import asyncio
+import os
 
 from aiocache import Cache
 from loguru import logger
@@ -40,7 +41,12 @@ class MercariSearch:
         logger.debug("Starting browser...")
         self._playwright = await self._manager.__aenter__()
         self._browser = await self._playwright.chromium.launch(headless=self.headless)
-        self._cache = Cache(Cache.REDIS, namespace="main")  # type: ignore
+        self._cache = Cache(
+            Cache.REDIS,  # type: ignore
+            namespace="mercari_jp",
+            endpoint=os.getenv("REDIS_HOST"),
+            port=os.getenv("REDIS_PORT"),
+        )
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
