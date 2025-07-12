@@ -62,27 +62,34 @@ def retry_policy(info: RetryInfo) -> RetryPolicyStrategy:
     return should_stop, delay
 
 
-def get_llm_friendly_items(items: list[Item]) -> str:
+def get_llm_friendly_items(items: list[Item], include_market_research: bool = False) -> str:
     """Convert the items to a format that is friendly to the LLM.
 
     Args:
         items (list[Item]): The list of items to convert.
+        include_market_research (bool): Whether to include the market research.
 
     Returns:
         str: The items in a format that is friendly to the LLM.
     """
     data = []
     for item in items:
-        data.append(get_llm_friendly_item(item, return_dict=True))
+        data.append(get_llm_friendly_item(item, return_dict=True, include_market_research=include_market_research))
     return json.dumps(data, indent=2, ensure_ascii=False)
 
 
-def get_llm_friendly_item(item: Item, return_dict: bool = False) -> str | dict:
+def get_llm_friendly_item(
+    item: Item,
+    return_dict: bool = False,
+    include_market_research: bool = False,
+) -> str | dict:
     """Get the LLM friendly item.
 
     Args:
         item (Item): The item to convert.
         return_dict (bool): Whether to return a dictionary or a JSON string.
+        include_relevance_score (bool): Whether to include the relevance score.
+        include_market_research (bool): Whether to include the market research.
 
     Returns:
         str | dict: The LLM friendly item.
@@ -104,6 +111,7 @@ def get_llm_friendly_item(item: Item, return_dict: bool = False) -> str | dict:
         "description": item_detail.description if item_detail else "",
         "condition": condition,
         "brand": item.brand,
+        "num_likes": item_detail.num_likes if item_detail else None,
         "seller_stars": item_detail.seller_review_stars if item_detail else None,
         "seller_total_person_reviews": item_detail.seller_review if item_detail else None,
         "delivery_from": item_detail.delivery_from if item_detail else None,
@@ -120,6 +128,9 @@ def get_llm_friendly_item(item: Item, return_dict: bool = False) -> str | dict:
 
     if item_detail and item_detail.posted_date:
         data["posted_date"] = item_detail.posted_date
+
+    if include_market_research and item.market_research_result:
+        data["market_research"] = item.market_research_result.get_llm_friendly_result()
 
     if return_dict:
         return data

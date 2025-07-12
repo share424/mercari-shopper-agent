@@ -13,7 +13,7 @@ from anthropic import AsyncAnthropic
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.prompts.evaluate_item import SYSTEM_PROMPT, USER_PROMPT
+from app.prompts.evaluate_item_jp import SYSTEM_PROMPT, USER_PROMPT
 from app.types import Item, ItemRelevanceScore, State, Tool, ToolResult
 from app.utils import get_llm_friendly_item, get_llm_friendly_items, retry_policy
 
@@ -105,6 +105,9 @@ class EvaluateSearchResultTool(Tool):
                     updated_items.append(item)
                     break
 
+        state.recommended_candidates.extend(updated_items)
+        state.remove_duplicate_recommended_candidates()
+
         return ToolResult(
             is_error=False,
             tool_response=get_llm_friendly_items(updated_items),
@@ -119,7 +122,7 @@ class EvaluateSearchResultTool(Tool):
             if item.relevance_score is None:
                 continue
             text += f"## [{item.name}]({item.item_url})\n"
-            text += f"### Price: {item.price}\n"
-            text += f"### Relevance Score: {item.relevance_score.score}\n"
-            text += f"### Relevance Reasoning: \n\n{item.relevance_score.reasoning}\n\n"
+            text += f"**Price**: {item.currency} {item.price}\n"
+            text += f"**Relevance Score**: {item.relevance_score.score}\n"
+            text += f"**Relevance Reasoning**: \n\n```\n{item.relevance_score.reasoning}\n```\n"
         return text

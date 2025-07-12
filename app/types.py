@@ -98,9 +98,6 @@ class Tool(BaseModel):
 class ItemDetail(BaseModel):
     """A structured representation of a product listing from Mercari."""
 
-    price_drop: str | None = None
-    """The price drop of the item."""
-
     converted_price: str | None = None
     """The converted price of the item."""
 
@@ -136,6 +133,9 @@ class ItemDetail(BaseModel):
 
     seller_verification_status: str | None = None
     """The credibility of the seller."""
+
+    num_likes: int | None = None
+    """The number of likes the item has."""
 
 
 class MarketResearchResult(BaseModel):
@@ -330,6 +330,9 @@ class State(BaseModel):
     recommended_items: list[ItemRecommendation] = Field(default_factory=list)
     """The recommended items."""
 
+    recommended_candidates: list[Item] = Field(default_factory=list)
+    """The recommended candidates."""
+
     def remove_duplicate_search_results(self):
         """Remove duplicate search results."""
         # avoid circular import
@@ -337,6 +340,14 @@ class State(BaseModel):
 
         unique_items = remove_duplicate_items(self.search_results)
         self.search_results = unique_items
+
+    def remove_duplicate_recommended_candidates(self):
+        """Remove duplicate recommended candidates."""
+        # avoid circular import
+        from app.utils import remove_duplicate_items  # noqa: PLC0415
+
+        unique_items = remove_duplicate_items(self.recommended_candidates)
+        self.recommended_candidates = unique_items
 
     def get_llm_friendly_state(self) -> str:
         """Get the LLM friendly state.

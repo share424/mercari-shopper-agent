@@ -4,6 +4,7 @@ This module contains the Mercari Search Japan class.
 """
 
 import asyncio
+from typing import Literal
 
 from aiocache import Cache
 from loguru import logger
@@ -77,8 +78,14 @@ class MercariJPSearch:
         return await self._browser.new_page(**BROWSER_CONFIG)
 
     # @retry(retry_policy=retry_policy)
-    async def _search_items(
-        self, query: str, min_price: int | None = None, max_price: int | None = None, max_items: int = 10
+    async def _search_items(  # noqa: PLR0913
+        self,
+        query: str,
+        min_price: int | None = None,
+        max_price: int | None = None,
+        max_items: int = 10,
+        sort_by: Literal["num_likes", "score", "created_time", "price"] = "score",
+        order: Literal["asc", "desc"] = "desc",
     ) -> list[Item]:
         """Search for items on Mercari Japan.
 
@@ -90,10 +97,12 @@ class MercariJPSearch:
             min_price (int | None): The minimum price to search for in USD.
             max_price (int | None): The maximum price to search for in USD.
             max_items (int): The maximum number of items to search for. Defaults to 10.
+            sort_by (Literal["num_likes", "score", "created_time", "price"]): The field to sort by. Defaults to "score".
+            order (Literal["asc", "desc"]): The order to sort by. Defaults to "desc".
         """
         page = await self._create_new_page()
         async with MercariJPSearchPage(page) as search_page:
-            return await search_page.search_items(query, min_price, max_price, max_items)
+            return await search_page.search_items(query, min_price, max_price, max_items, sort_by, order)
 
     async def _get_item_detail(self, item: Item) -> ItemDetail | None:
         """Get the item detail on Mercari Japan.
@@ -133,8 +142,14 @@ class MercariJPSearch:
         async with self._semaphore:
             return await self._get_item_detail(item)
 
-    async def search_items(
-        self, query: str, min_price: int | None = None, max_price: int | None = None, max_items: int = 10
+    async def search_items(  # noqa: PLR0913
+        self,
+        query: str,
+        min_price: int | None = None,
+        max_price: int | None = None,
+        max_items: int = 10,
+        sort_by: Literal["num_likes", "score", "created_time", "price"] = "score",
+        order: Literal["asc", "desc"] = "desc",
     ) -> list[Item]:
         """Search for items on Mercari Japan.
 
@@ -143,11 +158,13 @@ class MercariJPSearch:
             min_price (int | None): The minimum price to search for in JPY.
             max_price (int | None): The maximum price to search for in JPY.
             max_items (int): The maximum number of items to search for. Defaults to 10.
+            sort_by (Literal["num_likes", "score", "created_time", "price"]): The field to sort by. Defaults to "score".
+            order (Literal["asc", "desc"]): The order to sort by. Defaults to "desc".
 
         Returns:
             list[Item]: The list of items with the item detail.
         """
-        items = await self._search_items(query, min_price, max_price, max_items)
+        items = await self._search_items(query, min_price, max_price, max_items, sort_by, order)
 
         item_detail_tasks = [self._get_item_detail_with_semaphore(item) for item in items]
         item_details = await asyncio.gather(*item_detail_tasks)

@@ -15,13 +15,8 @@ STATUS_CODE_OK = 200
 class MarketResearch:
     """Market Research."""
 
-    def __init__(self, api_key: str):
-        """Initialize the MarketResearch.
-
-        Args:
-            api_key (str): The API key for the SerpApi.
-        """
-        self.api_key = api_key
+    def __init__(self):
+        """Initialize the MarketResearch."""
         self._cache: Cache | None = None
 
     async def __aenter__(self):

@@ -4,6 +4,7 @@ This module contains the Mercari Japan Search Page class.
 """
 
 import asyncio
+from typing import Literal
 
 from loguru import logger
 from playwright.async_api import Locator, Page, TimeoutError
@@ -31,13 +32,22 @@ class MercariJPSearchPage:
         self.page = page
         self.timeout = timeout
 
-    def _build_search_url(self, query: str, min_price: int | None = None, max_price: int | None = None) -> str:
+    def _build_search_url(
+        self,
+        query: str,
+        min_price: int | None = None,
+        max_price: int | None = None,
+        sort_by: Literal["num_likes", "score", "created_time", "price"] = "score",
+        order: Literal["asc", "desc"] = "desc",
+    ) -> str:
         """Build the search URL.
 
         Args:
             query (str): The query to search for.
             min_price (int | None): The minimum price to search for in JPY.
             max_price (int | None): The maximum price to search for in JPY.
+            sort_by (Literal["num_likes", "score", "created_time", "price"]): The field to sort by. Defaults to "score".
+            order (Literal["asc", "desc"]): The order to sort by. Defaults to "desc".
 
         Returns:
             str: The search URL.
@@ -47,6 +57,10 @@ class MercariJPSearchPage:
             url += f"&price_min={min_price}"
         if max_price:
             url += f"&price_max={max_price}"
+
+        url += f"&sort={sort_by}"
+        url += f"&order={order}"
+
         return url
 
     async def __aenter__(self):
@@ -57,8 +71,14 @@ class MercariJPSearchPage:
         """Exit the context manager."""
         await self.page.close()
 
-    async def search_items(
-        self, query: str, min_price: int | None = None, max_price: int | None = None, max_items: int = 10
+    async def search_items(  # noqa: PLR0913
+        self,
+        query: str,
+        min_price: int | None = None,
+        max_price: int | None = None,
+        max_items: int = 10,
+        sort_by: Literal["num_likes", "score", "created_time", "price"] = "score",
+        order: Literal["asc", "desc"] = "desc",
     ) -> list[Item]:
         """Search for items on Mercari.
 
@@ -67,19 +87,23 @@ class MercariJPSearchPage:
             min_price (int | None): The minimum price to search for in JPY. Defaults to None.
             max_price (int | None): The maximum price to search for in JPY. Defaults to None.
             max_items (int): The maximum number of items to search for. Defaults to 10.
+            sort_by (Literal["num_likes", "score", "created_time", "price"]): The field to sort by. Defaults to "score".
+            order (Literal["asc", "desc"]): The order to sort by. Defaults to "desc".
 
         Returns:
             list[Item]: The list of items found.
         """
-        logger.info(f"Searching for items: {query}, min_price: {min_price}, max_price: {max_price}")
-        await self.page.goto(self._build_search_url(query, min_price, max_price))
+        logger.info(
+            f"Searching for items: {query}, min_price: {min_price}, max_price: {max_price}, sort_by: {sort_by}, order: {order}"  # noqa: E501
+        )
+        await self.page.goto(self._build_search_url(query, min_price, max_price, sort_by, order))
         await self._wait_for_page_ready()
 
         if await self._is_no_results():
             logger.error("No results found")
             raise SearchNotFoundError("No results found")
 
-        items = await self._get_items()
+        items = await self._get_items(max_items)
         logger.info(f"Found {len(items)} items")
         return items
 
@@ -88,7 +112,7 @@ class MercariJPSearchPage:
         no_results_locator = self.page.get_by_text("出品された商品がありません")
         search_results_locator = self.page.get_by_test_id("search-item-grid")
 
-        await no_results_locator.or_(search_results_locator).wait_for(state="visible", timeout=self.timeout)
+        await no_results_locator.or_(search_results_locator).first.wait_for(state="visible", timeout=self.timeout)
 
     async def _is_no_results(self) -> bool:
         """Check if the page has no results.
@@ -98,11 +122,11 @@ class MercariJPSearchPage:
         """
         return await self.page.get_by_text("出品された商品がありません").is_visible()
 
-    async def _get_items(
-        self,
-        max_items: int = 10,
-    ) -> list[Item]:
+    async def _get_items(self, max_items: int = 10) -> list[Item]:
         """Get the items from the page.
+
+        Args:
+            max_items (int): The maximum number of items to get. Defaults to 10.
 
         Returns:
             list[Item]: The list of items found.
@@ -143,6 +167,7 @@ class MercariJPSearchPage:
 
         item_id = url.split("/")[-1]
         item_url = f"{self.base_url}/item/{item_id}"
+        # logger.info(f"Item URL: {item_url}")
 
         item_container_locator = item_locator.locator(f"#{item_id}")
 
@@ -150,7 +175,7 @@ class MercariJPSearchPage:
         # logger.info(f"Debug img: {debug_img}")
 
         task_map = {
-            "name": item_container_locator.locator("img").first.get_attribute("alt"),
+            "name": item_container_locator.get_by_test_id("thumbnail-item-name").first.text_content(),
             "image_url": item_container_locator.locator("img").first.get_attribute("src"),
             "currency": item_container_locator.locator('span[class^="currency__"]').first.text_content(),
             "price": item_container_locator.locator('span[class^="number__"]').first.text_content(),

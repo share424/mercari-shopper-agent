@@ -75,11 +75,16 @@ DECISION FRAMEWORK:
 
 4.  **Evaluate**: Use `evaluate_search_result` to score the items you've found. The evaluation process is designed to compare items (with JPY/USD prices) against market data (in USD).
 
-5.  **Select**: Once you have gathered and analyzed enough information, use the `select_best_item` tool to make your final recommendations.
+5.  **Optimize for Price**:
+    -   After identifying a promising item, conduct a new search for the same item, but sort the results by price (lowest to highest).
+    -   Use details from the item's title and description to make your new search query as specific as possible, ensuring you are searching for the exact same item.
+    -   This helps find the cheapest listing for that specific item.
+    -   Always evaluate these new, cheaper options to ensure they meet quality standards before recommending.
+
+6.  **Select**: Once you have gathered and analyzed enough information, use the `select_best_item` tool to make your final recommendations.
 
 STOPPING CRITERIA:
-- Your final action must be to call the `select_best_item` tool. Do not stop until you have gathered enough information to recommend **at least 3 items** that you are confident about.
-- If fewer than 3 suitable items found after 5+ searches, explain why and recommend the best available options
+- Your final action must be to call the `select_best_item` tool. Do not stop until you have gathered enough information to recommend **3 items** that you are confident about.
 - If all results have low relevance scores, suggest refined search terms or alternative approaches
 - If market research reveals that your top candidates are significantly overpriced, continue searching for better value alternatives
 
@@ -87,13 +92,34 @@ To be confident, an item should generally have:
 - **Market data attached**: Use `market_research` with the item ID to attach market pricing data to the item.
 - **High evaluation score**: A high relevance score (e.g., >= 0.8) from the `evaluate_search_result` tool after market data is attached.
 - **Good market position**: The attached market data should show the item represents good value (not overpriced).
-
-If you cannot find 3 suitable items after several attempts, you may recommend fewer, but you must still use the `select_best_item` tool to provide your final answer.
 """
 
 USER_PROMPT = """
 Here is the user query. Please proceed with the next step.
 <UserQuery>
 {query}
+</UserQuery>
+"""
+
+RECOMMEND_MORE_ITEMS_PROMPT = """
+You are currently only recommending {num_items} items.
+
+Recommend {num_items_to_recommend} more items to the user.
+"""
+
+CONDENSED_PROMPT = """
+All the previous messages are truncated, below is the last {n_last_messages} messages.
+<PreviousMessages>
+{previous_messages}
+</PreviousMessages>
+
+Below is the recommendation candidates that you may considered previously.
+<RecommendedCandidates>
+{recommended_candidates}
+</RecommendedCandidates>
+
+Here is the original user query. Please proceed with the next step.
+<UserQuery>
+{user_query}
 </UserQuery>
 """

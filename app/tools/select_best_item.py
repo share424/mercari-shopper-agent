@@ -9,7 +9,6 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.types import Item, ItemRecommendation, State, Tool, ToolResult
-from app.utils import get_llm_friendly_items
 
 
 class SelectBestItemToolArgs(BaseModel):
@@ -27,6 +26,9 @@ class SelectBestItemTool(Tool):
     description: str = "Select the best item from the search results"
     """The description of the tool."""
 
+    min_relevance_score: float = 0.8
+    """The minimum relevance score to select an item."""
+
     args_schema: Type[BaseModel] = SelectBestItemToolArgs
 
     async def execute(self, state: State, recommended_items: list[tuple[str, str]]) -> ToolResult:
@@ -41,6 +43,9 @@ class SelectBestItemTool(Tool):
         """
         logger.debug(f"Selecting best item: {recommended_items}")
         selected_items: list[Item] = []
+        current_recommended_item_ids: set[str] = {item.item.id for item in state.recommended_items}
+        is_error = False
+        error_msg = ""
         for item_id, reason in recommended_items:
             selected_item = [item for item in state.search_results if item.id == item_id]
             if len(selected_item) == 0:
@@ -48,13 +53,27 @@ class SelectBestItemTool(Tool):
                     is_error=False,
                     tool_response=f"Item with id {item_id} not found",
                     updated_state=state,
+                    simplified_tool_response=f"Item with id {item_id} not found",
                 )
+            if selected_item[0].id in current_recommended_item_ids:
+                continue
+
+            if not selected_item[0].relevance_score:
+                error_msg += f"Item with id {item_id} has no relevance score. Please evaluate the item first.\n"
+                is_error = True
+                continue
+
+            if selected_item[0].relevance_score.score < self.min_relevance_score:
+                error_msg += f"Item with id {item_id} has a relevance score of {selected_item[0].relevance_score.score}. Please recommend the other item.\n"  # noqa: E501
+                is_error = True
+                continue
+
             selected_items.append(selected_item[0])
             state.recommended_items.append(ItemRecommendation(item=selected_item[0], reason=reason))
 
         return ToolResult(
-            is_error=False,
-            tool_response=get_llm_friendly_items(selected_items),
+            is_error=is_error,
+            tool_response="Successfully added items to recommendation items" if not is_error else error_msg,
             updated_state=state,
             simplified_tool_response=self._get_simplified_tool_response(selected_items),
         )

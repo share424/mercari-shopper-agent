@@ -64,6 +64,7 @@ class MercariJPItemDetailPage:
             "seller_review_stars": self._extract_review_stars(),
             "categories": self._extract_categories(),
             "seller_verification_status": self._extract_seller_type(),
+            "num_likes": self._extract_content_by_test_id("icon-heart-button", int, "0"),
         }
 
         results = await asyncio.gather(*tasks.values())

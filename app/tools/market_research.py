@@ -16,52 +16,6 @@ from app.types import Item, MarketIntelligenceResult, State, Tool, ToolResult
 from app.utils import retry_policy
 
 
-class GeneralMarketResearchToolArgs(BaseModel):
-    """Arguments for the market_research tool."""
-
-    query: str = Field(
-        description="The item name to research. Always one single item name, don't include any other item names."
-    )
-    """The item name to research."""
-
-
-class GeneralMarketResearchTool(Tool):
-    """GeneralMarket Research Tool."""
-
-    name: str = "general_market_research"
-    """The name of the tool."""
-
-    description: str = "Research the market price of the item. The result will be a report of the market price, price strategy, value strategy, expected price, and price volatility."  # noqa: E501
-
-    api_key: str
-    """The API key for the SerpApi."""
-
-    args_schema: Type[BaseModel] = GeneralMarketResearchToolArgs
-    """The arguments schema for the tool."""
-
-    async def execute(self, state: State, query: str) -> ToolResult:
-        """Execute the tool."""
-        logger.info(f"Researching the market price of the item: {query}")
-        try:
-            async with MarketResearch(api_key=self.api_key) as mr:
-                result = await mr.get_market_intelligence(query)
-                logger.info(f"Market research result: \n{result.get_llm_friendly_result() if result else 'No result'}")
-                return ToolResult(
-                    is_error=result is None,
-                    tool_response=result.get_llm_friendly_result()
-                    if result
-                    else "Failed to research the market price. Please try again.",
-                    updated_state=state,
-                )
-        except Exception as e:
-            logger.error(f"Failed to research the market price: {e}")
-            return ToolResult(
-                is_error=True,
-                tool_response="Failed to research the market price. Please try again.",
-                updated_state=state,
-            )
-
-
 class MarketResearchToolArgs(BaseModel):
     """Arguments for the market_research tool."""
 
@@ -78,9 +32,6 @@ class MarketResearchTool(Tool):
     """The name of the tool."""
 
     description: str = "Research the market price of the item that already exists in the search results. The result will be a report of the market price, price strategy, value strategy, expected price, and price volatility."  # noqa: E501
-
-    api_key: str
-    """The API key for the SerpApi."""
 
     concurrent_limit: int = 1
     """The concurrent limit for the market research."""
@@ -143,7 +94,7 @@ class MarketResearchTool(Tool):
     async def _get_market_intelligence(self, item: Item) -> MarketIntelligenceResult | None:
         try:
             query = await self._get_query(item)
-            async with MarketResearch(api_key=self.api_key) as mr:
+            async with MarketResearch() as mr:
                 return await mr.get_market_intelligence(query)
         except Exception as e:
             logger.error(f"Failed to research the market price: {e}")
@@ -176,15 +127,18 @@ class MarketResearchTool(Tool):
             if result:
                 item.market_research_result = result
                 market_research_results.append(result.get_llm_friendly_result())
+                state.recommended_candidates.append(item)
             else:
                 market_research_results.append(f"Failed to research the market price of the item: {item.id}")
 
         debug_msg = "\n\n".join(market_research_results)
         logger.debug(f"Market research results: {debug_msg}")
 
+        state.remove_duplicate_recommended_candidates()
+
         return ToolResult(
             is_error=False,
-            tool_response="\n\n".join(market_research_results),
+            tool_response="Successfully researched the market price of the items. Use `evaluate_search_result` tool to evaluate the search results.",  # noqa: E501
             updated_state=state,
             simplified_tool_response=self._get_simplified_tool_response(items),
         )
@@ -192,9 +146,13 @@ class MarketResearchTool(Tool):
     def _get_simplified_tool_response(self, items: list[Item]) -> str:
         """Get the simplified tool response."""
         text = ""
+        i = 1
         for item in items:
             if item.market_research_result is None:
                 continue
-            text += f"## [{item.name}]({item.item_url})\n"
-            text += f"### Market Research Result: \n\n{item.market_research_result.get_llm_friendly_result()}\n\n"
+            text += f"## {i}. [{item.name}]({item.item_url})\n"
+            i += 1
+            text += (
+                f"### Market Research Result: \n\n```\n{item.market_research_result.get_llm_friendly_result()}\n```\n"  # noqa: E501
+            )
         return text

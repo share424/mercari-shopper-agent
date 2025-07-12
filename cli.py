@@ -23,7 +23,6 @@ async def main():
     agent = MercariShoppingAgent(
         client=client,
         model="claude-3-5-sonnet-latest",
-        serpapi_api_key=os.getenv("SERPAPI_API_KEY", ""),
     )
     recommendations = await agent.run(args.query)
     if not recommendations:

@@ -54,7 +54,6 @@ class MercariItemDetailPage:
         await self._wait_for_page_ready()
 
         tasks = {
-            "price_drop": self._extract_content_by_test_id("ItemPriceDrop"),
             "description": self._extract_content_by_test_id("ItemDetailsDescription"),
             "condition_type": self._extract_content_by_test_id("ItemDetailsCondition"),
             "posted_date": self._extract_content_by_test_id("ItemDetailsPosted"),

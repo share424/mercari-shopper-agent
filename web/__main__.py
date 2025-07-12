@@ -13,11 +13,7 @@ from app.types import ItemRecommendation
 load_dotenv()
 
 client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-agent = MercariShoppingAgent(
-    client=client,
-    model="claude-3-5-sonnet-latest",
-    serpapi_api_key=os.getenv("SERPAPI_API_KEY", ""),
-)
+agent = MercariShoppingAgent(client=client, model="claude-3-5-sonnet-latest")
 
 
 def get_item_recommendations_text(item_recommendations: list[ItemRecommendation] | None) -> str:
@@ -57,13 +53,15 @@ def get_item_recommendations_text(item_recommendations: list[ItemRecommendation]
 
         if item.market_research_result:
             text += "## Market Research Result\n"
+            text += "```\n"
             text += item.market_research_result.get_llm_friendly_result()
+            text += "\n```\n"
             text += "\n\n"
 
         if item.relevance_score:
             text += "## Relevance\n"
             text += f"**Score**: {item.relevance_score.score}\n\n"
-            text += f"**Reasoning**: \n\n{item.relevance_score.reasoning}\n\n"
+            text += f"**Reasoning**: \n\n```\n{item.relevance_score.reasoning}\n```\n"
 
         text += "</details>\n\n"
         text += "---"
@@ -77,7 +75,7 @@ async def interact_with_agent(prompt, messages):
 
     async for chunk in agent.run_stream(prompt):
         if chunk.action == "reasoning":
-            messages.append(gr.ChatMessage(role="assistant", content=chunk.text, metadata={"title": "Reasoning"}))
+            messages.append(gr.ChatMessage(role="assistant", content=chunk.text, metadata={"title": "Thinking"}))
             yield messages, "Thinking..."
         elif chunk.action == "tool_call":
             messages.append(gr.ChatMessage(role="assistant", content=chunk.text, metadata={"title": "Tool Call"}))
@@ -89,7 +87,7 @@ async def interact_with_agent(prompt, messages):
             messages.append(
                 gr.ChatMessage(
                     role="assistant",
-                    content="Recommending items...",
+                    content="Showing recommendations",
                     metadata={"title": "Completed"},
                 )
             )
@@ -121,21 +119,8 @@ async def main():
                 search_btn = gr.Button("Search")
                 recommend = gr.Markdown("### Recommendations will appear here", elem_id="recommend_box")
 
-                # Shared function to call on both submit/click
-                def disable_search():
-                    return gr.update(interactive=False)
-
-                def enable_search():
-                    return gr.update(interactive=True)
-
-            # Connect
-            submit_event = search.submit(interact_with_agent, [search, chat], [chat, recommend])
-            click_event = search_btn.click(interact_with_agent, [search, chat], [chat, recommend], preprocess=False)
-
-            # Disable search box while running
-            for event in (submit_event, click_event):
-                event.then(disable_search, None, [search])
-                event.then(enable_search, None, [search], queue=False)
+            search.submit(interact_with_agent, [search, chat], [chat, recommend])
+            search_btn.click(interact_with_agent, [search, chat], [chat, recommend], preprocess=False)
 
     demo.launch()
 

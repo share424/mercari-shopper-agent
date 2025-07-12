@@ -3,6 +3,7 @@
 This agent is used to search for items on Mercari and select the best item.
 """
 
+import json
 from typing import Any, AsyncGenerator, Generator, cast
 
 from aioretry.retry import retry
@@ -16,7 +17,7 @@ from anthropic.types import (
 )
 from loguru import logger
 
-from app.prompts.agent import RECOMMEND_MORE_ITEMS_PROMPT, SYSTEM_PROMPT, USER_PROMPT
+from app.prompts.agent_jp import CONDENSED_PROMPT, RECOMMEND_MORE_ITEMS_PROMPT, SYSTEM_PROMPT, USER_PROMPT
 from app.tools import (
     EvaluateSearchResultTool,
     MarketResearchTool,
@@ -25,7 +26,7 @@ from app.tools import (
     SelectBestItemTool,
 )
 from app.types import AgentAction, ItemRecommendation, State, Tool
-from app.utils import retry_policy
+from app.utils import get_llm_friendly_items, retry_policy
 
 
 class MercariShoppingAgent:
@@ -34,12 +35,14 @@ class MercariShoppingAgent:
     This agent is used to search for items on Mercari and select the best item.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         client: AsyncAnthropic,
         model: str,
-        serpapi_api_key: str,
+        max_tokens: int = 4096,
+        max_context_tokens: int = 70000,
         max_iterations: int = 15,
+        keep_n_last_messages: int = 3,
         tools: list[Tool] | None = None,
     ):
         """Initialize the Mercari Shopping Agent.
@@ -47,17 +50,22 @@ class MercariShoppingAgent:
         Args:
             client (AsyncAnthropic): The Anthropic client.
             model (str): The model to use.
-            serpapi_api_key (str): The API key for the SerpApi.
+            max_tokens (int): The maximum number of tokens. Defaults to 4096.
+            max_context_tokens (int): The maximum number of tokens in the context. Defaults to 40000.
             max_iterations (int): The maximum number of iterations. Defaults to 15.
-            tools (list[Tool]): The tools to use. Defaults to [MercariSearchTool(), SelectBestItemTool(),].
+            keep_n_last_messages (int): The number of last messages to keep. Defaults to 3.
+            tools (list[Tool]): The tools to use.
         """
         self.client = client
         self.model = model
+        self.max_tokens = max_tokens
         self.max_iterations = max_iterations
+        self.max_context_tokens = max_context_tokens
+        self.keep_n_last_messages = keep_n_last_messages
         self.tools = tools or [
             MercariJPSearchTool(),
             SelectBestItemTool(),
-            MarketResearchTool(api_key=serpapi_api_key, client=client, model=model),
+            MarketResearchTool(client=client, model=model),
             EvaluateSearchResultTool(client=client, model=model),
             PriceCalculatorTool(),
         ]
@@ -151,13 +159,22 @@ class MercariShoppingAgent:
         Returns:
             Message: The LLM response.
         """
-        return await self.client.messages.create(
+        tools = self._tool_params
+        tools[-1]["cache_control"] = {"type": "ephemeral"}
+        if isinstance(messages[-1]["content"], list):
+            messages[-1]["content"][-1]["cache_control"] = {"type": "ephemeral"}  # type: ignore
+
+        response = await self.client.messages.create(
             model=self.model,
-            system=SYSTEM_PROMPT,
-            tools=self._tool_params,
+            system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
+            tools=tools,
             messages=messages,
-            max_tokens=4096,
+            max_tokens=self.max_tokens,
         )
+        if isinstance(messages[-1]["content"], list):
+            del messages[-1]["content"][-1]["cache_control"]  # type: ignore
+
+        return response
 
     def _should_stop(self, state: State) -> bool:
         """Check if the agent should stop.
@@ -231,6 +248,36 @@ class MercariShoppingAgent:
                 logger.debug(f"LLM response: {content.type}")
                 continue
             yield content.text
+
+    async def _is_conversation_too_long(self, messages: list[MessageParam]) -> bool:
+        """Check if the conversation is too long."""
+        response = await self.client.messages.count_tokens(
+            model=self.model,
+            system=SYSTEM_PROMPT,
+            messages=messages,
+        )
+
+        return response.input_tokens > self.max_context_tokens
+
+    def _condense_messages(self, state: State, messages: list[MessageParam]) -> list[MessageParam]:
+        """Condense the messages."""
+        if len(messages) <= self.keep_n_last_messages:
+            return messages
+
+        recommended_candidates = get_llm_friendly_items(state.recommended_candidates, include_market_research=True)
+
+        condensed_messages = [
+            MessageParam(
+                role="user",
+                content=CONDENSED_PROMPT.format(
+                    n_last_messages=self.keep_n_last_messages,
+                    previous_messages=json.dumps(messages[-self.keep_n_last_messages :], indent=2),
+                    recommended_candidates=recommended_candidates,
+                    user_query=state.user_query,
+                ),
+            ),
+        ]
+        return condensed_messages
 
     @logger.catch
     async def _run(self, query: str) -> list[ItemRecommendation]:
@@ -369,13 +416,11 @@ class MercariShoppingAgent:
                 )
                 return
 
-            # if the minimum number of recommended items is not reached,
-            # ask the LLM to select the remaining items
-            if len(state.recommended_items) > 0:
-                messages = self._add_recommend_more_items_to_messages(messages, state)
+            if await self._is_conversation_too_long(messages):
+                messages = self._condense_messages(state, messages)
                 yield AgentAction(
                     action="reasoning",
-                    text="Recommend more items",
+                    text="The conversation is too long. Condensing the conversation.",
                 )
 
             # 1. Call LLM with current state
@@ -406,12 +451,26 @@ class MercariShoppingAgent:
                 )
                 return
 
+            if self._should_recommend_more_items(state, response):
+                messages = self._add_recommend_more_items_to_messages(messages, state)
+                yield AgentAction(
+                    action="reasoning",
+                    text="Recommend more items",
+                )
+
         logger.info("Max iterations reached")
         yield AgentAction(
             action="stop",
             text="Max iterations reached",
             item_recommendations=state.recommended_items,
         )
+
+    def _should_recommend_more_items(self, state: State, response: Message) -> bool:
+        """Check if the LLM should recommend more items."""
+        tool_calls = [block.name for block in response.content if isinstance(block, ToolUseBlock)]
+        if "recommend_more_items" in tool_calls and len(state.recommended_items) < 3:  # noqa: PLR2004
+            return True
+        return False
 
     async def run_stream(self, query: str) -> AsyncGenerator[AgentAction, None]:
         """Run the agent.
