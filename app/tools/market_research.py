@@ -82,7 +82,7 @@ class MarketResearchTool(Tool):
     api_key: str
     """The API key for the SerpApi."""
 
-    concurrent_limit: int = 10
+    concurrent_limit: int = 1
     """The concurrent limit for the market research."""
 
     client: AsyncAnthropic
@@ -186,4 +186,15 @@ class MarketResearchTool(Tool):
             is_error=False,
             tool_response="\n\n".join(market_research_results),
             updated_state=state,
+            simplified_tool_response=self._get_simplified_tool_response(items),
         )
+
+    def _get_simplified_tool_response(self, items: list[Item]) -> str:
+        """Get the simplified tool response."""
+        text = ""
+        for item in items:
+            if item.market_research_result is None:
+                continue
+            text += f"## [{item.name}]({item.item_url})\n"
+            text += f"### Market Research Result: \n\n{item.market_research_result.get_llm_friendly_result()}\n\n"
+        return text

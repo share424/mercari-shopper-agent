@@ -6,7 +6,6 @@ This module contains the Mercari Search class.
 import asyncio
 
 from aiocache import Cache
-from aioretry.retry import retry
 from loguru import logger
 from playwright.async_api import Browser, Page, async_playwright
 from playwright_stealth import Stealth
@@ -15,7 +14,6 @@ from app.libs.mercari.config import USER_AGENT, VIEWPORT
 from app.libs.mercari.pages.item_detail import MercariItemDetailPage
 from app.libs.mercari.pages.search import MercariSearchPage
 from app.types import Item, ItemDetail
-from app.utils import retry_policy
 
 
 class MercariSearch:
@@ -76,7 +74,7 @@ class MercariSearch:
             viewport=VIEWPORT,
         )
 
-    @retry(retry_policy=retry_policy)
+    # @retry(retry_policy=retry_policy)
     async def _search_items(self, query: str, min_price: int | None = None, max_price: int | None = None) -> list[Item]:
         """Search for items on Mercari.
 

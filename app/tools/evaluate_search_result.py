@@ -109,4 +109,17 @@ class EvaluateSearchResultTool(Tool):
             is_error=False,
             tool_response=get_llm_friendly_items(updated_items),
             updated_state=state,
+            simplified_tool_response=self._get_simplified_tool_response(updated_items),
         )
+
+    def _get_simplified_tool_response(self, items: list[Item]) -> str:
+        """Get the simplified tool response."""
+        text = ""
+        for item in items:
+            if item.relevance_score is None:
+                continue
+            text += f"## [{item.name}]({item.item_url})\n"
+            text += f"### Price: {item.price}\n"
+            text += f"### Relevance Score: {item.relevance_score.score}\n"
+            text += f"### Relevance Reasoning: \n\n{item.relevance_score.reasoning}\n\n"
+        return text

@@ -64,10 +64,12 @@ class PriceCalculatorTool(Tool):
                 is_error=False,
                 tool_response=f"The price of {source_price} {source_currency} is {result} {target_currency}",
                 updated_state=state,
+                simplified_tool_response=f"The price of {source_price} {source_currency} is {result} {target_currency}",
             )
         except Exception:
             return ToolResult(
                 is_error=True,
                 tool_response=f"Error converting price from {source_currency} to {target_currency}",
                 updated_state=state,
+                simplified_tool_response=f"Error converting price from {source_currency} to {target_currency}",
             )

@@ -4,7 +4,7 @@ This module contains the types for the Mercari Shopping Agent.
 """
 
 import json
-from typing import Any, Type
+from typing import Any, Literal, Type
 
 from anthropic.types import ToolParam
 from pydantic import BaseModel, ConfigDict, Field
@@ -31,6 +31,9 @@ class ToolResult(BaseModel):
 
     tool_response: str
     """The response from the tool."""
+
+    simplified_tool_response: str | None = None
+    """The simplified response from the tool."""
 
     updated_state: "State"
     """The updated state of the tool call."""
@@ -351,3 +354,16 @@ class State(BaseModel):
             },
             indent=2,
         )
+
+
+class AgentAction(BaseModel):
+    """An action that the agent can take."""
+
+    action: Literal["reasoning", "tool_call", "tool_result", "stop"]
+    """The action to take."""
+
+    text: str
+    """The text to display to the user."""
+
+    item_recommendations: list[ItemRecommendation] | None = None
+    """The item recommendations to display to the user."""

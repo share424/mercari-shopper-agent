@@ -83,7 +83,7 @@ class MercariSearchPage:
         no_results_locator = self.page.get_by_text("No results found")
         search_results_locator = self.page.get_by_test_id("Search-items")
 
-        await no_results_locator.or_(search_results_locator).wait_for(state="visible", timeout=self.timeout)
+        await no_results_locator.or_(search_results_locator).first.wait_for(state="visible", timeout=self.timeout)
 
     async def _is_no_results(self) -> bool:
         """Check if the page has no results.
@@ -91,7 +91,7 @@ class MercariSearchPage:
         Returns:
             bool: True if the page has no results, False otherwise.
         """
-        return await self.page.get_by_text("No results found").is_visible()
+        return await self.page.get_by_text("No results found").first.is_visible()
 
     async def _get_items(
         self,

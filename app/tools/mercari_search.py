@@ -7,6 +7,7 @@ from typing import Type
 
 from pydantic import BaseModel, Field
 
+from app.exception import SearchNotFoundError
 from app.libs.mercari import MercariSearch
 from app.types import Item, State, Tool, ToolResult
 from app.utils import get_llm_friendly_items
@@ -66,10 +67,26 @@ class MercariSearchTool(Tool):
                 is_error=False,
                 tool_response=get_llm_friendly_items(search_results),
                 updated_state=state,
+                simplified_tool_response=self._get_simplified_tool_response(search_results),
+            )
+        except SearchNotFoundError:
+            return ToolResult(
+                is_error=True,
+                tool_response="No items found. Please try again.",
+                updated_state=state,
+                simplified_tool_response="No items found. Please try again.",
             )
         except Exception:
             return ToolResult(
                 is_error=True,
                 tool_response="Failed to search items. Please try again.",
                 updated_state=state,
+                simplified_tool_response="Failed to search items. Please try again.",
             )
+
+    def _get_simplified_tool_response(self, items: list[Item]) -> str:
+        """Get the simplified tool response."""
+        text = "Search results:\n"
+        for i, item in enumerate(items, start=1):
+            text += f"{i}. [{item.name} ({item.currency} {item.price})]({item.item_url})\n"
+        return text

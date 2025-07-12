@@ -83,3 +83,10 @@ Here is the user query. Please proceed with the next step.
 {query}
 </UserQuery>
 """
+
+
+RECOMMEND_MORE_ITEMS_PROMPT = """
+You are currently only recommending {num_items} items.
+
+Recommend {num_items_to_recommend} more items to the user.
+"""

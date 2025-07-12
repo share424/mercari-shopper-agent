@@ -66,10 +66,19 @@ class MercariJPSearchTool(Tool):
                 is_error=False,
                 tool_response=get_llm_friendly_items(search_results),
                 updated_state=state,
+                simplified_tool_response=self._get_simplified_tool_response(search_results),
             )
         except Exception:
             return ToolResult(
                 is_error=True,
                 tool_response="Failed to search items. Please try again.",
                 updated_state=state,
+                simplified_tool_response="Failed to search items. Please try again.",
             )
+
+    def _get_simplified_tool_response(self, items: list[Item]) -> str:
+        """Get the simplified tool response."""
+        text = "Search results:\n"
+        for i, item in enumerate(items, start=1):
+            text += f"{i}. [{item.name} ({item.currency} {item.price})]({item.item_url})\n"
+        return text

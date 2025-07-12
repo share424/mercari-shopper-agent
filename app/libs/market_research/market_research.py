@@ -3,10 +3,10 @@
 from typing import Any
 
 from aiocache import Cache
-from httpx import AsyncClient
 from loguru import logger
 
 from app.libs.market_research.utils import research_market_intelligence
+from app.libs.mercari.search import MercariSearch
 from app.types import BasicProductData, MarketIntelligenceResult
 
 STATUS_CODE_OK = 200
@@ -44,28 +44,14 @@ class MarketResearch:
         Returns:
             list[dict]: The search results.
         """
-        async with AsyncClient() as client:
-            response = await client.get(
-                "https://serpapi.com/search.json",
-                params={
-                    "engine": "ebay",
-                    "_nkw": query,
-                    "ebay_domain": "ebay.com",
-                    "api_key": self.api_key,
-                },
-            )
-            if response.status_code != STATUS_CODE_OK:
-                logger.error(f"Failed to search: {response.text}")
-                raise Exception(f"Failed to search: {response.status_code}")
-
-            response_json = response.json()
-            shopping_results: list[dict[str, Any]] = response_json["organic_results"]
+        async with MercariSearch() as ms:
+            items = await ms._search_items(query)
 
             return [
                 BasicProductData(
-                    price=self._parse_price(item),
+                    price=item.price,
                 )
-                for item in shopping_results
+                for item in items
             ]
 
     def _parse_price(self, data: dict[str, Any]) -> float:

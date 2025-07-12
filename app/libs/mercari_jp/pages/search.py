@@ -7,6 +7,7 @@ import asyncio
 
 from loguru import logger
 from playwright.async_api import Locator, Page, TimeoutError
+from price_parser.parser import parse_price
 
 from app.exception import SearchNotFoundError
 from app.types import Item
@@ -84,7 +85,7 @@ class MercariJPSearchPage:
 
     async def _wait_for_page_ready(self):
         """Wait for the page to be ready."""
-        no_results_locator = self.page.get_by_text("No results found")
+        no_results_locator = self.page.get_by_text("出品された商品がありません")
         search_results_locator = self.page.get_by_test_id("search-item-grid")
 
         await no_results_locator.or_(search_results_locator).wait_for(state="visible", timeout=self.timeout)
@@ -95,7 +96,7 @@ class MercariJPSearchPage:
         Returns:
             bool: True if the page has no results, False otherwise.
         """
-        return await self.page.get_by_text("No results found").is_visible()
+        return await self.page.get_by_text("出品された商品がありません").is_visible()
 
     async def _get_items(
         self,
@@ -166,7 +167,7 @@ class MercariJPSearchPage:
         return Item(
             id=item_id,
             name=task_result.get("name", ""),
-            price=float(task_result.get("price", 0)),
+            price=float(parse_price(task_result.get("price", "0") or "0").amount or 0),
             currency=task_result.get("currency", ""),
             image_url=task_result.get("image_url", ""),
             item_url=item_url,

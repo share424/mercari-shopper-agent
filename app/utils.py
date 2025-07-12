@@ -88,7 +88,7 @@ def get_llm_friendly_item(item: Item, return_dict: bool = False) -> str | dict:
         str | dict: The LLM friendly item.
     """
     item_detail = item.item_detail
-    if item_detail:
+    if item_detail and item_detail.condition_type:
         condition = item_detail.condition_type
     else:
         condition = item.condition_grade

@@ -6,7 +6,6 @@ This module contains the Mercari Search Japan class.
 import asyncio
 
 from aiocache import Cache
-from aioretry.retry import retry
 from loguru import logger
 from playwright.async_api import Browser, Page, async_playwright
 from playwright_stealth import Stealth
@@ -15,7 +14,6 @@ from app.libs.mercari_jp.config import BROWSER_CONFIG
 from app.libs.mercari_jp.pages.item_detail import MercariJPItemDetailPage
 from app.libs.mercari_jp.pages.search import MercariJPSearchPage
 from app.types import Item, ItemDetail
-from app.utils import retry_policy
 
 
 class MercariJPSearch:
@@ -78,7 +76,7 @@ class MercariJPSearch:
 
         return await self._browser.new_page(**BROWSER_CONFIG)
 
-    @retry(retry_policy=retry_policy)
+    # @retry(retry_policy=retry_policy)
     async def _search_items(
         self, query: str, min_price: int | None = None, max_price: int | None = None, max_items: int = 10
     ) -> list[Item]:
