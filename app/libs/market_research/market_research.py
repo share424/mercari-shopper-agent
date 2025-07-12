@@ -89,6 +89,7 @@ class MarketResearch:
         Returns:
             dict[str, float]: The market statistics.
         """
+        logger.debug(f"Getting market intelligence for: {query}")
         result = await self._cache.get(query)  # type: ignore
         if result:
             logger.debug(f"Market research result found in cache: {query}")

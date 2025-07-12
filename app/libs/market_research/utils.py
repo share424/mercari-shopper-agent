@@ -10,6 +10,7 @@ from typing import List
 import numpy as np
 
 from app.types import BasicProductData, MarketIntelligenceResult, PriceGuidance, PriceRange, ShoppingRecommendation
+from app.utils import usd_to_jpy
 
 
 def research_market_intelligence(
@@ -84,13 +85,13 @@ def _generate_price_guidance(price_ranges: PriceRange) -> PriceGuidance:
         PriceGuidance: The price guidance.
     """
     return PriceGuidance(
-        budget_shopping=f"For budget options, look for items under ${price_ranges.budget_range_max:,.0f}",
-        typical_pricing=f"Typical prices range from ${price_ranges.mid_range_min:,.0f} to ${price_ranges.mid_range_max:,.0f}",  # noqa: E501
-        premium_pricing=f"Premium options start around ${price_ranges.premium_range_min:,.0f}",
-        excellent_deals=f"Excellent deals are items under ${price_ranges.excellent_deal_max:,.0f}",
-        good_deals=f"Good deals are items under ${price_ranges.good_deal_max:,.0f}",
-        avoid_overpriced=f"Avoid items over ${price_ranges.overpriced_min:,.0f} (likely overpriced)",
-        expected_price=f"Expect to pay around ${price_ranges.median:,.0f} for typical quality",
+        budget_shopping=f"For budget options, look for items under USD{price_ranges.budget_range_max:,.0f} (¥{usd_to_jpy(price_ranges.budget_range_max):,.0f})",  # noqa: E501
+        typical_pricing=f"Typical prices range from USD{price_ranges.mid_range_min:,.0f} (¥{usd_to_jpy(price_ranges.mid_range_min):,.0f}) to USD{price_ranges.mid_range_max:,.0f} (¥{usd_to_jpy(price_ranges.mid_range_max):,.0f})",  # noqa: E501
+        premium_pricing=f"Premium options start around USD{price_ranges.premium_range_min:,.0f} (¥{usd_to_jpy(price_ranges.premium_range_min):,.0f})",  # noqa: E501
+        excellent_deals=f"Excellent deals are items under USD{price_ranges.excellent_deal_max:,.0f} (¥{usd_to_jpy(price_ranges.excellent_deal_max):,.0f})",  # noqa: E501
+        good_deals=f"Good deals are items under USD{price_ranges.good_deal_max:,.0f} (¥{usd_to_jpy(price_ranges.good_deal_max):,.0f})",  # noqa: E501
+        avoid_overpriced=f"Avoid items over USD{price_ranges.overpriced_min:,.0f} (¥{usd_to_jpy(price_ranges.overpriced_min):,.0f}) (likely overpriced)",  # noqa: E501
+        expected_price=f"Expect to pay around USD{price_ranges.median:,.0f} (¥{usd_to_jpy(price_ranges.median):,.0f}) for typical quality",  # noqa: E501
     )
 
 
@@ -136,9 +137,10 @@ def _generate_shopping_recommendations(price_ranges: PriceRange, price_volatilit
 
     # Value strategy
     recommendations.value_strategy = (
-        f"Best value: items under ${price_ranges.good_deal_max:,.0f}. "
-        f"Avoid: items over ${price_ranges.overpriced_min:,.0f}. "
-        f"Typical range: ${price_ranges.mid_range_min:,.0f} - ${price_ranges.mid_range_max:,.0f}."
+        f"Best value: items under USD{price_ranges.good_deal_max:,.0f} (¥{usd_to_jpy(price_ranges.good_deal_max):,.0f}). "  # noqa: E501
+        f"Avoid: items over USD{price_ranges.overpriced_min:,.0f} (¥{usd_to_jpy(price_ranges.overpriced_min):,.0f}). "  # noqa: E501
+        f"Typical range: USD{price_ranges.mid_range_min:,.0f} (¥{usd_to_jpy(price_ranges.mid_range_min):,.0f}) - "  # noqa: E501
+        f"USD{price_ranges.mid_range_max:,.0f} (¥{usd_to_jpy(price_ranges.mid_range_max):,.0f})."
     )
 
     return recommendations
@@ -151,11 +153,13 @@ def _generate_market_summary(
     return (
         f"Market intelligence for {product_category}: "
         f"Analyzed {sample_size} items. "
-        f"Typical price: ${price_ranges.median:,.0f} "
-        f"(range: ${price_ranges.min:,.0f}-${price_ranges.max:,.0f}). "
+        f"Typical price: USD{price_ranges.median:,.0f} (¥{usd_to_jpy(price_ranges.median):,.0f}) "
+        f"(range: USD{price_ranges.min:,.0f} (¥{usd_to_jpy(price_ranges.min):,.0f})-"
+        f"USD{price_ranges.max:,.0f} (¥{usd_to_jpy(price_ranges.max):,.0f})). "
         f"Price volatility: {price_volatility}. "
-        f"Recommendation: Look for items under ${price_ranges.good_deal_max:,.0f} "
-        f"for best value. Avoid items over ${price_ranges.overpriced_min:,.0f}."
+        f"Recommendation: Look for items under USD{price_ranges.good_deal_max:,.0f} "
+        f"(¥{usd_to_jpy(price_ranges.good_deal_max):,.0f}) for best value. Avoid items over "
+        f"USD{price_ranges.overpriced_min:,.0f} (¥{usd_to_jpy(price_ranges.overpriced_min):,.0f})."
     )
 
 
@@ -168,13 +172,13 @@ def create_market_data_from_raw(prices: List[float]) -> List[BasicProductData]:
 # Example usage
 if __name__ == "__main__":
     # Market research data (from your search API) - only prices needed
-    market_prices = [45000.0, 42000.0, 48000.0, 39000.0, 52000.0, 41000.0, 46000.0, 44000.0, 50000.0, 43000.0]
+    market_prices = [300.0, 350.0, 400.0, 450.0, 500.0, 550.0, 600.0, 650.0, 700.0, 750.0]
 
     # Convert to objects
     market_data = create_market_data_from_raw(market_prices)
 
     # Research the market
-    intelligence = research_market_intelligence(market_data, "Nintendo Switch OLED")
+    intelligence = research_market_intelligence(market_data, "Iphone X")
     import json
 
     print(json.dumps(intelligence.model_dump(), indent=2))

@@ -4,11 +4,16 @@ import asyncio
 from asyncio import Semaphore
 from typing import Type
 
+import json_repair
+from aioretry.retry import retry
+from anthropic import AsyncAnthropic
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from app.libs.market_research.market_research import MarketResearch
-from app.types import MarketIntelligenceResult, State, Tool, ToolResult
+from app.prompts.market_research_query import SYSTEM_PROMPT, USER_PROMPT
+from app.types import Item, MarketIntelligenceResult, State, Tool, ToolResult
+from app.utils import retry_policy
 
 
 class GeneralMarketResearchToolArgs(BaseModel):
@@ -80,11 +85,64 @@ class MarketResearchTool(Tool):
     concurrent_limit: int = 10
     """The concurrent limit for the market research."""
 
+    client: AsyncAnthropic
+    """The client for the Anthropic API."""
+
+    model: str
+    """The model to use for the tool."""
+
     args_schema: Type[BaseModel] = MarketResearchToolArgs
     """The arguments schema for the tool."""
 
-    async def _get_market_intelligence(self, query: str) -> MarketIntelligenceResult | None:
+    @retry(retry_policy)
+    async def _get_query(self, item: Item) -> str:
+        """Get the query for the market research.
+
+        Args:
+            item (Item): The item to get the query for.
+
+        Returns:
+            str: The query for the market research. Return the item name if the query is not found.
+        """
+        response = await self.client.messages.create(
+            system=SYSTEM_PROMPT,
+            model=self.model,
+            max_tokens=1024,
+            messages=[
+                {
+                    "role": "user",
+                    "content": USER_PROMPT.format(
+                        item_name=item.name,
+                        item_description=item.item_detail.description if item.item_detail else "",
+                        item_categories=item.item_detail.categories if item.item_detail else "",
+                    ),
+                }
+            ],
+        )
+
         try:
+            text = None
+            for content in response.content:
+                if content.type == "text":
+                    text = content.text
+                    break
+
+            if text is None:
+                return item.name
+
+            json_data = json_repair.loads(text)
+            if isinstance(json_data, dict):
+                query = json_data.get("query", item.name)
+                return query
+
+            return item.name
+        except Exception as e:
+            logger.error(f"Error evaluating item: {e}")
+            return item.name
+
+    async def _get_market_intelligence(self, item: Item) -> MarketIntelligenceResult | None:
+        try:
+            query = await self._get_query(item)
             async with MarketResearch(api_key=self.api_key) as mr:
                 return await mr.get_market_intelligence(query)
         except Exception as e:
@@ -92,10 +150,10 @@ class MarketResearchTool(Tool):
             return None
 
     async def _get_market_intelligence_with_semaphore(
-        self, query: str, semaphore: Semaphore
+        self, item: Item, semaphore: Semaphore
     ) -> MarketIntelligenceResult | None:
         async with semaphore:
-            return await self._get_market_intelligence(query)
+            return await self._get_market_intelligence(item)
 
     async def execute(self, state: State, item_ids: list[str]) -> ToolResult:
         """Execute the tool.
@@ -110,7 +168,7 @@ class MarketResearchTool(Tool):
         logger.info(f"Researching the market price of the items: {item_ids}")
         semaphore = Semaphore(self.concurrent_limit)
         items = [item for item in state.search_results if item.id in item_ids]
-        tasks = [self._get_market_intelligence_with_semaphore(item.name, semaphore) for item in items]
+        tasks = [self._get_market_intelligence_with_semaphore(item, semaphore) for item in items]
         results = await asyncio.gather(*tasks)
 
         market_research_results = []

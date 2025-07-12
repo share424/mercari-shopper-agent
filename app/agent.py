@@ -19,9 +19,9 @@ from loguru import logger
 from app.prompts.agent import SYSTEM_PROMPT, USER_PROMPT
 from app.tools import (
     EvaluateSearchResultTool,
-    GeneralMarketResearchTool,
     MarketResearchTool,
-    MercariSearchTool,
+    MercariJPSearchTool,
+    PriceCalculatorTool,
     SelectBestItemTool,
 )
 from app.types import ItemRecommendation, State, Tool
@@ -55,11 +55,11 @@ class MercariShoppingAgent:
         self.model = model
         self.max_iterations = max_iterations
         self.tools = tools or [
-            MercariSearchTool(),
+            MercariJPSearchTool(),
             SelectBestItemTool(),
-            MarketResearchTool(api_key=serpapi_api_key),
-            GeneralMarketResearchTool(api_key=serpapi_api_key),
+            MarketResearchTool(api_key=serpapi_api_key, client=client, model=model),
             EvaluateSearchResultTool(client=client, model=model),
+            PriceCalculatorTool(),
         ]
         self._tool_params = self._get_tool_params()
         self._tools_by_name = {tool.name: tool for tool in self.tools}

@@ -50,6 +50,7 @@ def retry_policy(info: RetryInfo) -> RetryPolicyStrategy:
         RetryPolicyStrategy: The retry policy strategy.
     """
     logger.info(f"Retry attempt {info.fails} of {MAX_RETRIES}")
+    logger.error(f"Error: {info.exception}")
     should_stop = True
     if isinstance(info.exception, (SearchNotFoundError, InternalServerError)) or info.fails <= MAX_RETRIES:
         should_stop = False
@@ -73,7 +74,7 @@ def get_llm_friendly_items(items: list[Item]) -> str:
     data = []
     for item in items:
         data.append(get_llm_friendly_item(item, return_dict=True))
-    return json.dumps(data, indent=2)
+    return json.dumps(data, indent=2, ensure_ascii=False)
 
 
 def get_llm_friendly_item(item: Item, return_dict: bool = False) -> str | dict:
@@ -91,23 +92,45 @@ def get_llm_friendly_item(item: Item, return_dict: bool = False) -> str | dict:
         condition = item_detail.condition_type
     else:
         condition = item.condition_grade
+
+    price = f"{item.currency} {item.price}"
+    if item_detail and item_detail.converted_price:
+        price = [price, item_detail.converted_price]
+
     data = {
         "id": item.id,
         "name": item.name,
-        "price": f"{item.currency} {item.price}",
+        "price": price,
         "description": item_detail.description if item_detail else "",
         "condition": condition,
         "brand": item.brand,
         "seller_stars": item_detail.seller_review_stars if item_detail else None,
         "seller_total_person_reviews": item_detail.seller_review if item_detail else None,
         "delivery_from": item_detail.delivery_from if item_detail else None,
-        "shipping_fee": item_detail.shipping_fee if item_detail else None,
         "categories": item_detail.categories if item_detail else [],
-        "posted_date": item_detail.posted_date if item_detail else "",
         "relevance_score": item.relevance_score.score if item.relevance_score else None,
         "relevance_score_reasoning": item.relevance_score.reasoning if item.relevance_score else None,
     }
 
+    if item_detail and item_detail.seller_verification_status:
+        data["seller_verification_status "] = item_detail.seller_verification_status
+
+    if item_detail and item_detail.shipping_fee:
+        data["shipping_fee"] = item_detail.shipping_fee
+
+    if item_detail and item_detail.posted_date:
+        data["posted_date"] = item_detail.posted_date
+
     if return_dict:
         return data
-    return json.dumps(data, indent=2)
+    return json.dumps(data, indent=2, ensure_ascii=False)
+
+
+def jpy_to_usd(jpy_price: float) -> float:
+    """Convert JPY to USD."""
+    return jpy_price * 0.0068  # 2025/07/12
+
+
+def usd_to_jpy(usd_price: float) -> float:
+    """Convert USD to JPY."""
+    return usd_price * 147.42  # 2025/07/12

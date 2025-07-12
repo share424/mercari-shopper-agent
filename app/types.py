@@ -95,8 +95,11 @@ class Tool(BaseModel):
 class ItemDetail(BaseModel):
     """A structured representation of a product listing from Mercari."""
 
-    price_drop: str
+    price_drop: str | None = None
     """The price drop of the item."""
+
+    converted_price: str | None = None
+    """The converted price of the item."""
 
     description: str
     """The description of the item."""
@@ -104,19 +107,19 @@ class ItemDetail(BaseModel):
     condition_type: str
     """The condition type of the item."""
 
-    posted_date: str
+    posted_date: str | None = None
     """The date the item was posted."""
 
     delivery_from: str
     """The country the item is being delivered from."""
 
-    shipping_fee: str
+    shipping_fee: str | None = None
     """The shipping fee of the item."""
 
     seller_name: str
     """The name of the seller."""
 
-    seller_username: str
+    seller_username: str | None = None
     """The username of the seller."""
 
     seller_review: int
@@ -127,6 +130,9 @@ class ItemDetail(BaseModel):
 
     categories: list[str]
     """The categories the item belongs to."""
+
+    seller_verification_status: str | None = None
+    """The credibility of the seller."""
 
 
 class MarketResearchResult(BaseModel):
@@ -274,10 +280,10 @@ class Item(BaseModel):
     brand: str | None = None
     """The brand of the item."""
 
-    condition_grade: str
+    condition_grade: str | None = None
     """The condition grade of the item."""
 
-    availability: str
+    availability: str | None = None
     """The availability of the item."""
 
     image_url: str

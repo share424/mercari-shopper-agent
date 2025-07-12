@@ -5,7 +5,9 @@ This module contains the tools for the Mercari Shopping Agent.
 
 from app.tools.evaluate_search_result import EvaluateSearchResultTool
 from app.tools.market_research import GeneralMarketResearchTool, MarketResearchTool
+from app.tools.mercari_jp_search import MercariJPSearchTool
 from app.tools.mercari_search import MercariSearchTool
+from app.tools.price_calculator import PriceCalculatorTool
 from app.tools.select_best_item import SelectBestItemTool
 
 __all__ = [
@@ -14,4 +16,6 @@ __all__ = [
     "EvaluateSearchResultTool",
     "MarketResearchTool",
     "GeneralMarketResearchTool",
+    "MercariJPSearchTool",
+    "PriceCalculatorTool",
 ]
