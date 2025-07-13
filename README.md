@@ -481,10 +481,32 @@ The project uses [Loguru](https://github.com/Delgan/loguru) for logging. It prov
 
 ## Potential Improvements
 
+### Core Search & Discovery
 - **Enhanced Search Strategy:** Implement more sophisticated search techniques, such as browsing by category or using filters for brand, condition, and seller, to better mimic human browsing patterns and yield more targeted results.
+- **Cross-Platform Integration:** Extend beyond Mercari to search multiple Japanese marketplaces (Yahoo Auctions, Rakuten, Amazon Japan) for comprehensive product coverage and price comparison.
+- **Real-time Price Monitoring:** Implement price tracking and alerts to notify users when items drop below their target price or when better deals become available.
+
+### User Experience & Personalization
 - **Interactive User Feedback:** Allow the agent to ask clarifying questions or for the user to provide feedback on initial results (e.g., "Show me more like this," "I don't like this brand"). This would create a more dynamic and conversational experience.
+- **User Preference Learning:** Build a preference model that learns from user interactions, searches, and selections to provide increasingly personalized recommendations over time.
+- **Voice Interface:** Add voice input/output capabilities for hands-free shopping assistance, particularly useful for mobile users.
+
+### Advanced Analysis & Intelligence
 - **Visual Analysis:** Integrate a multi-modal model to analyze product images. This could be used to automatically detect cosmetic defects, verify included accessories, or identify details not mentioned in the text description.
+- **Review Sentiment Analysis:** Incorporate review analysis from multiple sources to assess product quality and identify potential issues before recommendation.
+- **Seasonal Intelligence:** Implement seasonal awareness to suggest timely products (winter gear in November, summer items in May) and anticipate demand patterns.
+- **Bundle Recommendations:** Suggest complementary items and create bundle deals (e.g., phone case with phone, laptop bag with laptop).
+
+### Technical Architecture
+- **Async Tool Execution:** Implement parallel tool execution for market research and evaluation to reduce response time and improve user experience.
+- **Model Context Protocol (MCP):** Integrate MCP for standardized tool communication and easier extension with third-party integrations, enabling seamless connection to external APIs and services.
+- **Multi-Agent Architecture:** Deploy specialized agents for different tasks (search agent, analysis agent, evaluation agent) using Agent-to-Agent (A2A) Protocol for better task distribution and performance.
+- **Reflexion Framework:** Implement [Reflexion](https://arxiv.org/pdf/2303.11366) to provide self-reflective feedback for each action, enabling the agent to learn from mistakes and improve decision-making over time.
+
+### Monitoring & Analytics
 - **Long-Term Monitoring:** Implement a feature where the agent can save a user's search and monitor Mercari over time, notifying the user when a new listing that matches their criteria and is a good value appears.
-- **Improve Market Research:** Improve the market research by searching the similar item review to avoid recommending poor item quality.
-- **Async tool calls:** Tools like market research can be run in background to avoid blocking.
-- **Use Reflexion:** We can use [Reflexion](https://arxiv.org/pdf/2303.11366) to give feedback for each action to the LLM to improve the agent's performance.
+- **Performance Analytics:** Add comprehensive analytics to track recommendation accuracy, user satisfaction, and search success rates for continuous improvement.
+- **Price History Tracking:** Maintain historical price data to identify trends, predict future price movements, and optimize purchase timing recommendations.
+
+### Integration & Accessibility
+- **Social Proof Integration:** Incorporate social signals like trending items, popularity rankings, and community recommendations to enhance decision-making.
