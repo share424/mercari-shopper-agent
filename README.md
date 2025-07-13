@@ -483,8 +483,7 @@ The project uses [Loguru](https://github.com/Delgan/loguru) for logging. It prov
 
 ### Core Search & Discovery
 - **Enhanced Search Strategy:** Implement more sophisticated search techniques, such as browsing by category or using filters for brand, condition, and seller, to better mimic human browsing patterns and yield more targeted results.
-- **Cross-Platform Integration:** Extend beyond Mercari to search multiple Japanese marketplaces (Yahoo Auctions, Rakuten, Amazon Japan) for comprehensive product coverage and price comparison.
-- **Real-time Price Monitoring:** Implement price tracking and alerts to notify users when items drop below their target price or when better deals become available.
+- **Cross-Platform Integration:** Extend beyond Mercari to search multiple Japanese marketplaces (Yahoo Auctions, Rakuten, Amazon Japan) for price comparison.
 
 ### User Experience & Personalization
 - **Interactive User Feedback:** Allow the agent to ask clarifying questions or for the user to provide feedback on initial results (e.g., "Show me more like this," "I don't like this brand"). This would create a more dynamic and conversational experience.
