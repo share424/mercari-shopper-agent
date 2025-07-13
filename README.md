@@ -473,6 +473,8 @@ The user interface is built with [Gradio](https://github.com/gradio-app/gradio).
 
 To handle transient network issues and API errors from Anthropic (such as `529 overloaded_error` or `429 rate_limit_error`), the agent employs a retry mechanism. This is implemented using the `aioretry` library, which automatically re-attempts failed API calls with an exponential backoff strategy (up to 5 retries). For other unexpected errors during tool execution, the system logs the issue and is designed to continue processing where possible, ensuring greater resilience.
 
+For the mercari search tool, I will let the LLM to handle the error and retry the tool call.
+
 ### Logging
 
 The project uses [Loguru](https://github.com/Delgan/loguru) for logging. It provides clear, color-coded logs of the agent's thoughts, actions, and tool calls, which is invaluable for debugging and tracing the agent's reasoning process.
