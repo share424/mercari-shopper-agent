@@ -457,7 +457,9 @@ To manage the LLM's context window, a hybrid approach is used:
 2. If the limit is reached, the history is condensed. The last `3` messages are preserved, and a summary of the `recommendation_candidates` is injected into a new user prompt to maintain the most critical context for the next step.
 
 #### Structured Output
-To ensure reliable JSON parsing from the LLM's output, this project uses the [json-repair](https://github.com/mangiucugna/json_repair/) library. This robustly handles common formatting errors in the model's raw text, providing a reliable mechanism for working with structured data.
+At the time of implementation, Anthropic's Claude API lacked native structured output support, requiring a custom solution for parsing JSON responses. The project employs the [json-repair](https://github.com/mangiucugna/json_repair/) library to handle malformed JSON output from the LLM. This library automatically corrects common formatting issues in the model's raw text responses, ensuring consistent and reliable structured data extraction.
+
+While an alternative approach would be to leverage tool call arguments for structured output, the custom JSON parser was chosen for its simplicity and direct integration with the existing codebase.
 
 ### Stop Condition
 
