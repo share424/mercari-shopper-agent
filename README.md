@@ -487,4 +487,4 @@ The project uses [Loguru](https://github.com/Delgan/loguru) for logging. It prov
 - **Long-Term Monitoring:** Implement a feature where the agent can save a user's search and monitor Mercari over time, notifying the user when a new listing that matches their criteria and is a good value appears.
 - **Improve Market Research:** Improve the market research by searching the similar item review to avoid recommending poor item quality.
 - **Async tool calls:** Tools like market research can be run in background to avoid blocking.
-- **Use Reflexion:**: We can use [Reflexion](https://arxiv.org/pdf/2303.11366) to give feedback for each action to the LLM to improve the agent's performance.
+- **Use Reflexion:** We can use [Reflexion](https://arxiv.org/pdf/2303.11366) to give feedback for each action to the LLM to improve the agent's performance.
