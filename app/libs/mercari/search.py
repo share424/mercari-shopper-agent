@@ -36,8 +36,12 @@ class MercariSearch:
         self._semaphore = asyncio.Semaphore(max_concurrent_pages)
         self._manager = Stealth().use_async(async_playwright())
 
-    async def __aenter__(self):
-        """Enter the context manager."""
+    async def __aenter__(self) -> "MercariSearch":
+        """Enter the context manager.
+
+        Returns:
+            MercariSearch: The instance of the MercariSearch.
+        """
         logger.debug("Starting browser...")
         self._playwright = await self._manager.__aenter__()
         self._browser = await self._playwright.chromium.launch(headless=self.headless)
@@ -50,7 +54,13 @@ class MercariSearch:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Exit the context manager."""
+        """Exit the context manager.
+
+        Args:
+            exc_type (type): The type of the exception.
+            exc_val (Exception): The exception.
+            exc_tb (Traceback): The traceback.
+        """
         if self._browser:
             await self._browser.close()
             self._browser = None
@@ -80,17 +90,16 @@ class MercariSearch:
             viewport=VIEWPORT,
         )
 
-    # @retry(retry_policy=retry_policy)
     async def _search_items(self, query: str, min_price: int | None = None, max_price: int | None = None) -> list[Item]:
         """Search for items on Mercari.
-
-        Sometimes, the search is failed due to bot detection.
-        This function will retry the search up to 3 times.
 
         Args:
             query (str): The query to search for.
             min_price (int | None): The minimum price to search for in USD.
             max_price (int | None): The maximum price to search for in USD.
+
+        Returns:
+            list[Item]: The list of items.
         """
         page = await self._create_new_page()
         async with MercariSearchPage(page) as search_page:

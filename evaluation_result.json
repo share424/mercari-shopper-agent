@@ -1,0 +1,32 @@
+[
+  {
+    "key": "trajectory_accuracy",
+    "score": true,
+    "comment": "The trajectory clearly understands the user's goal—which is to find a lightweight laptop for data analysis with specifications such as at least 16GB RAM, full-day battery, and a budget under $900—and it follows a logical sequence: first converting the budget from USD to JPY to set a proper price range, then conducting a search on a Japanese marketplace, followed by market research and evaluation of search results against the requirements. The progression between the steps is clear and each tool call builds on the previous step, leading eventually to a selection of potentially best items. Therefore, the trajectory is logically sound, shows clear progression, and is relatively efficient in achieving its goal. Thus, the score should be: true.",
+    "metadata": null
+  },
+  {
+    "key": "trajectory_accuracy",
+    "score": true,
+    "comment": "The trajectory demonstrates a clear progression toward addressing the user's query. It starts by understanding the query (to recommend a product for lower back pain), then performs appropriate searches with targeted queries, refines the results, and uses market research and evaluation tools to assess the items. Each step logically builds on the previous one, leading to a recommendation, which is aligned with the goal of providing a back pain reduction solution. Thus, the score should be: true.",
+    "metadata": null
+  },
+  {
+    "key": "trajectory_accuracy",
+    "score": true,
+    "comment": "The trajectory exhibits logical progression from understanding the user’s need (bedbug elimination) to sequentially executing tool calls that perform item searches, market research, evaluation, and finally selection of recommendations. Each step builds logically on the previous one and the process is efficient and systematic. Thus, the score should be: true.",
+    "metadata": null
+  },
+  {
+    "key": "trajectory_accuracy",
+    "score": true,
+    "comment": "The trajectory starts with a clear understanding of the user query and proceeds logically through a series of steps to gather relevant product information. The agent makes an initial search using a Japanese query for a dark winter jacket, then reviews market data on selected items, and evaluates their suitability based on conditions, pricing, and seller credibility. The process is systematic, showing progression from searching, gathering market research data, detailed evaluation of product listings, and finally selecting the best item based on the criteria. Each internal tool call is logically connected and contributes to achieving the recommendation goal. Thus, the score should be: true.",
+    "metadata": null
+  },
+  {
+    "key": "trajectory_accuracy",
+    "score": true,
+    "comment": "The trajectory clearly demonstrates logical progression. It begins by understanding the user query for a high-end gaming PC with an unlimited budget and then performs a series of targeted tool calls to search for suitable items. The steps proceed in a logical order: initiating a search, analyzing market data, evaluating search results, and finally selecting the best item. Each step builds on the previous one, and the approach is efficient and aligned with the goal. Thus, the score should be: true.",
+    "metadata": null
+  }
+]

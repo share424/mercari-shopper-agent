@@ -4,6 +4,7 @@ This agent is used to search for items on Mercari and select the best item.
 """
 
 import json
+from copy import deepcopy
 from typing import Any, AsyncGenerator, Generator, cast
 
 from aioretry.retry import retry
@@ -16,6 +17,7 @@ from anthropic.types import (
     ToolUseBlock,
 )
 from loguru import logger
+from pydantic import BaseModel
 
 from app.prompts.agent_jp import CONDENSED_PROMPT, RECOMMEND_MORE_ITEMS_PROMPT, SYSTEM_PROMPT, USER_PROMPT
 from app.tools import (
@@ -41,9 +43,12 @@ class MercariShoppingAgent:
         model: str,
         max_tokens: int = 4096,
         max_context_tokens: int = 70000,
+        temperature: float = 0.0,
         max_iterations: int = 15,
         keep_n_last_messages: int = 3,
         tools: list[Tool] | None = None,
+        save_trajectory: bool = False,
+        trajectory_file: str = "trajectory.json",
     ):
         """Initialize the Mercari Shopping Agent.
 
@@ -52,19 +57,25 @@ class MercariShoppingAgent:
             model (str): The model to use.
             max_tokens (int): The maximum number of tokens. Defaults to 4096.
             max_context_tokens (int): The maximum number of tokens in the context. Defaults to 40000.
+            temperature (float): The temperature to use for the LLM. Defaults to 0.0.
             max_iterations (int): The maximum number of iterations. Defaults to 15.
             keep_n_last_messages (int): The number of last messages to keep. Defaults to 3.
             tools (list[Tool]): The tools to use.
+            save_trajectory (bool): Whether to save the trajectory for debugging or evaluation. Defaults to False.
+            trajectory_file (str): The file to save the trajectory. Defaults to "trajectory.json".
         """
         self.client = client
         self.model = model
         self.max_tokens = max_tokens
+        self.temperature = temperature
         self.max_iterations = max_iterations
         self.max_context_tokens = max_context_tokens
         self.keep_n_last_messages = keep_n_last_messages
+        self.save_trajectory = save_trajectory
+        self.trajectory_file = trajectory_file
         self.tools = tools or [
             MercariJPSearchTool(),
-            SelectBestItemTool(),
+            SelectBestItemTool(client=client, model=model),
             MarketResearchTool(client=client, model=model),
             EvaluateSearchResultTool(client=client, model=model),
             PriceCalculatorTool(),
@@ -96,6 +107,7 @@ class MercariShoppingAgent:
                 content=USER_PROMPT.format(query=state.user_query),
             )
         )
+        self._save_trajectory(messages)
         return messages
 
     def _add_recommend_more_items_to_messages(self, messages: list[MessageParam], state: State) -> list[MessageParam]:
@@ -111,6 +123,7 @@ class MercariShoppingAgent:
                 ),
             )
         )
+        self._save_trajectory(messages)
         return messages
 
     def _add_tool_results_to_messages(
@@ -134,6 +147,7 @@ class MercariShoppingAgent:
                 },
             )
         )
+        self._save_trajectory(messages)
         return messages
 
     def _add_llm_response_to_messages(self, messages: list[MessageParam], response: Message) -> list[MessageParam]:
@@ -147,6 +161,7 @@ class MercariShoppingAgent:
             list[MessageParam]: The messages.
         """
         messages.append(MessageParam(role=response.role, content=response.content))
+        self._save_trajectory(messages)
         return messages
 
     @retry(retry_policy)
@@ -170,11 +185,37 @@ class MercariShoppingAgent:
             tools=tools,
             messages=messages,
             max_tokens=self.max_tokens,
+            temperature=self.temperature,
         )
         if isinstance(messages[-1]["content"], list):
             del messages[-1]["content"][-1]["cache_control"]  # type: ignore
 
         return response
+
+    def _save_trajectory(self, messages: list[MessageParam]):
+        """Save the trajectory.
+
+        Args:
+            messages (list[MessageParam]): The messages.
+        """
+        if not self.save_trajectory:
+            return
+
+        temp_messages = deepcopy(messages)
+        safe_messages = []
+        for message in temp_messages:
+            if isinstance(message["content"], list):
+                fixed_content = []
+                for content in message["content"]:
+                    if isinstance(content, BaseModel):
+                        fixed_content.append(content.model_dump())
+                    else:
+                        fixed_content.append(content)
+                message["content"] = fixed_content
+            safe_messages.append(message)
+
+        with open(self.trajectory_file, "w") as f:
+            f.write(json.dumps(safe_messages, indent=2, ensure_ascii=False))
 
     def _should_stop(self, state: State) -> bool:
         """Check if the agent should stop.
@@ -293,7 +334,6 @@ class MercariShoppingAgent:
         """
         state = State(user_query=query)
         messages: list[MessageParam] = []
-        # 0. Add current state to messages
         messages = self._add_current_state_to_messages(messages, state)
 
         for iteration in range(self.max_iterations):
@@ -302,10 +342,8 @@ class MercariShoppingAgent:
             if self._should_stop(state):
                 return state.recommended_items
 
-            # if the minimum number of recommended items is not reached,
-            # ask the LLM to select the remaining items
-            if len(state.recommended_items) > 0:
-                messages = self._add_recommend_more_items_to_messages(messages, state)
+            if await self._is_conversation_too_long(messages):
+                messages = self._condense_messages(state, messages)
 
             # 1. Call LLM with current state
             response = await self._get_llm_response(messages)
@@ -320,6 +358,9 @@ class MercariShoppingAgent:
             else:
                 logger.info(f"Stop reason: {response.stop_reason}")
                 return state.recommended_items
+
+            if self._should_recommend_more_items(state, response):
+                messages = self._add_recommend_more_items_to_messages(messages, state)
 
         logger.info("Max iterations reached")
         return state.recommended_items
@@ -395,14 +436,8 @@ class MercariShoppingAgent:
             query (str): The user query.
 
         """
-        yield AgentAction(
-            action="reasoning",
-            text="Thinking...",
-        )
-
         state = State(user_query=query)
         messages: list[MessageParam] = []
-        # 0. Add current state to messages
         messages = self._add_current_state_to_messages(messages, state)
 
         for iteration in range(self.max_iterations):
@@ -468,7 +503,7 @@ class MercariShoppingAgent:
     def _should_recommend_more_items(self, state: State, response: Message) -> bool:
         """Check if the LLM should recommend more items."""
         tool_calls = [block.name for block in response.content if isinstance(block, ToolUseBlock)]
-        if "recommend_more_items" in tool_calls and len(state.recommended_items) < 3:  # noqa: PLR2004
+        if "select_best_item" in tool_calls and len(state.recommended_items) < 3:  # noqa: PLR2004
             return True
         return False
 

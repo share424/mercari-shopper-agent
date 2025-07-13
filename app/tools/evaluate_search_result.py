@@ -44,6 +44,9 @@ class EvaluateSearchResultTool(Tool):
     model: str
     """The model to use for the tool."""
 
+    temperature: float = 0.0
+    """The temperature to use for the tool."""
+
     args_schema: Type[BaseModel] = EvaluateSearchResultToolArgs
     """The arguments schema for the tool."""
 
@@ -54,6 +57,7 @@ class EvaluateSearchResultTool(Tool):
             system=SYSTEM_PROMPT.format(current_date=datetime.now().strftime("%Y-%m-%d")),
             model=self.model,
             max_tokens=1024,
+            temperature=self.temperature,
             messages=[
                 {
                     "role": "user",

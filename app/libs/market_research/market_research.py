@@ -20,8 +20,12 @@ class MarketResearch:
         """Initialize the MarketResearch."""
         self._cache: Cache | None = None
 
-    async def __aenter__(self):
-        """Enter the context manager."""
+    async def __aenter__(self) -> "MarketResearch":
+        """Enter the context manager.
+
+        Returns:
+            MarketResearch: The instance of the MarketResearch.
+        """
         self._cache = Cache(
             Cache.REDIS,  # type: ignore
             namespace="market_intelligence",
@@ -56,7 +60,14 @@ class MarketResearch:
             ]
 
     def _parse_price(self, data: dict[str, Any]) -> float:
-        """Parse the price from the data."""
+        """Parse the price from the data.
+
+        Args:
+            data (dict[str, Any]): The data to parse the price from.
+
+        Returns:
+            float: The price.
+        """
         price = data.get("price", {})
 
         if "extracted" in price:
@@ -74,7 +85,7 @@ class MarketResearch:
             query (str): The query to search for.
 
         Returns:
-            dict[str, float]: The market statistics.
+            MarketIntelligenceResult | None: The market statistics. None if no results found.
         """
         logger.debug(f"Getting market intelligence for: {query}")
         result = await self._cache.get(query)  # type: ignore

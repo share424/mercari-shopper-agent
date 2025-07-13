@@ -65,6 +65,7 @@ def _analyze_price_ranges(prices: List[float]) -> PriceRange:
         max=max(prices),
         average=statistics.mean(prices),
         median=statistics.median(prices),
+        # use quartiles to segment the price range
         budget_range_max=float(np.percentile(prices, 25)),  # Budget-friendly upper limit
         mid_range_min=float(np.percentile(prices, 25)),  # Mid-range lower limit
         mid_range_max=float(np.percentile(prices, 75)),  # Mid-range upper limit
@@ -96,23 +97,47 @@ def _generate_price_guidance(price_ranges: PriceRange) -> PriceGuidance:
 
 
 def _assess_price_volatility(prices: List[float]) -> str:
-    """Assess price volatility in the market."""
-    if not prices or len(prices) < 2:  # noqa: PLR2004
+    """Assess price volatility using a method robust to outliers.
+
+    Args:
+        prices (list[float]): The prices to analyze.
+
+    Returns:
+        str: The price volatility.
+    """
+    if not prices or len(prices) < 4:  # Need at least 4 data points for quartiles # noqa: PLR2004
         return "unknown"
 
-    # Calculate coefficient of variation
-    cv = statistics.stdev(prices) / statistics.mean(prices)
+    # use Interquartile Range to assess price volatility
+    q1 = np.percentile(prices, 25)
+    q3 = np.percentile(prices, 75)
 
-    if cv <= 0.15:  # noqa: PLR2004
+    # Avoid division by zero if all prices are the same
+    if (q3 + q1) == 0:
         return "stable"
-    elif cv <= 0.30:  # noqa: PLR2004
+
+    # Calculate the Quartile Coefficient of Dispersion
+    qcd = (q3 - q1) / (q3 + q1)
+
+    # Use similar thresholds, but they may need adjustment for QCD
+    if qcd <= 0.10:  # QCD values are typically lower than CV # noqa: PLR2004
+        return "stable"
+    elif qcd <= 0.20:  # noqa: PLR2004
         return "moderate"
     else:
         return "volatile"
 
 
 def _generate_shopping_recommendations(price_ranges: PriceRange, price_volatility: str) -> ShoppingRecommendation:
-    """Generate specific shopping recommendations based on price analysis."""
+    """Generate specific shopping recommendations based on price analysis.
+
+    Args:
+        price_ranges (PriceRange): The price ranges to generate recommendations for.
+        price_volatility (str): The price volatility.
+
+    Returns:
+        ShoppingRecommendation: The shopping recommendations.
+    """
     recommendations = ShoppingRecommendation(
         price_strategy="",
         timing_strategy="",
@@ -149,13 +174,23 @@ def _generate_shopping_recommendations(price_ranges: PriceRange, price_volatilit
 def _generate_market_summary(
     product_category: str, sample_size: int, price_ranges: PriceRange, price_volatility: str
 ) -> str:
-    """Generate comprehensive market summary based on price analysis."""
+    """Generate comprehensive market summary based on price analysis.
+
+    Args:
+        product_category (str): The product category.
+        sample_size (int): The sample size.
+        price_ranges (PriceRange): The price ranges.
+        price_volatility (str): The price volatility.
+
+    Returns:
+        str: The market summary.
+    """
     return (
-        f"Market intelligence for {product_category}: "
-        f"Analyzed {sample_size} items. "
+        f"Market intelligence for {product_category}: \n"
+        f"Analyzed {sample_size} items. \n"
         f"Typical price: USD{price_ranges.median:,.0f} (¥{usd_to_jpy(price_ranges.median):,.0f}) "
         f"(range: USD{price_ranges.min:,.0f} (¥{usd_to_jpy(price_ranges.min):,.0f})-"
-        f"USD{price_ranges.max:,.0f} (¥{usd_to_jpy(price_ranges.max):,.0f})). "
+        f"USD{price_ranges.max:,.0f} (¥{usd_to_jpy(price_ranges.max):,.0f})). \n"
         f"Price volatility: {price_volatility}. "
         f"Recommendation: Look for items under USD{price_ranges.good_deal_max:,.0f} "
         f"(¥{usd_to_jpy(price_ranges.good_deal_max):,.0f}) for best value. Avoid items over "
@@ -165,27 +200,12 @@ def _generate_market_summary(
 
 # Helper function
 def create_market_data_from_raw(prices: List[float]) -> List[BasicProductData]:
-    """Convert raw market research data into BasicProductData objects."""
+    """Convert raw market research data into BasicProductData objects.
+
+    Args:
+        prices (list[float]): The prices to convert.
+
+    Returns:
+        list[BasicProductData]: The converted prices.
+    """
     return [BasicProductData(price=p) for p in prices]
-
-
-# Example usage
-if __name__ == "__main__":
-    # Market research data (from your search API) - only prices needed
-    market_prices = [300.0, 350.0, 400.0, 450.0, 500.0, 550.0, 600.0, 650.0, 700.0, 750.0]
-
-    # Convert to objects
-    market_data = create_market_data_from_raw(market_prices)
-
-    # Research the market
-    intelligence = research_market_intelligence(market_data, "Iphone X")
-    import json
-
-    print(json.dumps(intelligence.model_dump(), indent=2))
-
-    print("Market Intelligence Report:")
-    print(f"Summary: {intelligence.market_summary}")
-    print(f"Price Strategy: {intelligence.shopping_recommendations.price_strategy}")
-    print(f"Value Strategy: {intelligence.shopping_recommendations.value_strategy}")
-    print(f"Expected Price: {intelligence.price_guidance.expected_price}")
-    print(f"Price Volatility: {intelligence.price_volatility}")

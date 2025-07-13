@@ -14,7 +14,6 @@ RUN uv sync --locked
 # 6. Copy the rest of the application code
 COPY app ./app
 COPY web.py ./
-COPY cli.py ./
 
 # 7. Install Playwright browsers
 RUN uv run playwright install --with-deps chromium

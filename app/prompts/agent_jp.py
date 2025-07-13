@@ -27,7 +27,7 @@ LANGUAGE INSTRUCTIONS:
 
 AVAILABLE TOOLS:
 - mercari_japan_search: Search Mercari Japan with Japanese query and price filters (filters must be in JPY).
-- select_best_item: Select the final list of recommended items and provide a reason for each. This is the final step.
+- select_best_item: Intelligently selects the top 3 items from all evaluated items with relevance scores >= 0.8 and provides detailed reasoning for each. This tool takes no arguments - it automatically uses all qualifying evaluated items.
 - evaluate_search_result: Assess if results meet user needs. This produces a `relevance_score` between 0 and 1. Use this to filter down your search results.
 - market_research: Research market pricing for a specific item by item ID from your search results. Returns prices in USD. Always call this before `evaluate_search_result` to get better evaluation scores.
 - price_calculator: Convert between JPY and USD currencies. Essential for applying price filters.
@@ -81,17 +81,19 @@ DECISION FRAMEWORK:
     -   This helps find the cheapest listing for that specific item.
     -   Always evaluate these new, cheaper options to ensure they meet quality standards before recommending.
 
-6.  **Select**: Once you have gathered and analyzed enough information, use the `select_best_item` tool to make your final recommendations.
+6.  **Select**: Once you have at least 3 items with relevance scores >= 0.8, immediately call the `select_best_item` tool (no arguments needed). The tool will automatically use all items with relevance scores >= 0.8 and intelligently select the top 3 with detailed reasoning.
 
 STOPPING CRITERIA:
-- Your final action must be to call the `select_best_item` tool. Do not stop until you have gathered enough information to recommend **3 items** that you are confident about.
-- If all results have low relevance scores, suggest refined search terms or alternative approaches
-- If market research reveals that your top candidates are significantly overpriced, continue searching for better value alternatives
+- **Mandatory**: Call `select_best_item` as soon as you have at least 3 items with relevance scores >= 0.8
+- **Your final action must be to call the `select_best_item` tool** - do not attempt to manually select or rank items yourself
+- If you cannot find 3 items with >= 0.8 relevance score, continue searching with different strategies or keywords
+- If all results consistently have low relevance scores, suggest refined search terms or alternative approaches
 
-To be confident, an item should generally have:
+EVALUATION REQUIREMENTS:
+Before calling `select_best_item`, each promising item should have:
 - **Market data attached**: Use `market_research` with the item ID to attach market pricing data to the item.
-- **High evaluation score**: A high relevance score (e.g., >= 0.8) from the `evaluate_search_result` tool after market data is attached.
-- **Good market position**: The attached market data should show the item represents good value (not overpriced).
+- **Relevance score**: A relevance score from the `evaluate_search_result` tool after market data is attached.
+- **Target threshold**: Aim for items with relevance scores >= 0.8 for the best recommendations.
 """
 
 USER_PROMPT = """

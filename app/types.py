@@ -305,14 +305,39 @@ class Item(BaseModel):
     """The market research result of the item."""
 
 
+class TrustSignal(BaseModel):
+    """A trust signal for an item."""
+
+    seller_rating: str
+    """The seller rating of the trust signal."""
+
+    notes: str
+    """The notes of the trust signal."""
+
+
 class ItemRecommendation(BaseModel):
     """A recommendation for an item."""
 
     item: Item
     """The item to recommend."""
 
-    reason: str
-    """The reason for the recommendation."""
+    title: str
+    """The title of the recommendation."""
+
+    persona_fit: str
+    """The persona fit of the recommendation."""
+
+    reasoning_summary: str
+    """The reasoning summary of the recommendation."""
+
+    pros: list[str]
+    """The pros of the recommendation."""
+
+    cons: list[str]
+    """The cons of the recommendation."""
+
+    trust_signals: TrustSignal
+    """The trust signals of the recommendation."""
 
 
 class State(BaseModel):
